@@ -26,5 +26,12 @@
         "hostname": "chatgpt.com",
         "enabled": true,
         "label": "ChatGPT"
+    },
+    {
+        "api": "/samantha/chat/completion",
+        "name": "doubao",
+        "hostname": "www.doubao.com",
+        "enabled": true,
+        "label": "豆包"
     }
 ]

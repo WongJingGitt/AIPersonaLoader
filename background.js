@@ -199,6 +199,130 @@ ${originalPrompt}
                         }
                         return requestBody;
                     },
+                    googleAIStudio: async (requestBody, apiOptions, globalEnableState, infos) => {
+                        /*
+                            Google AI Studio对请求有加密验证，修改Prompt，会导致请求失败 403
+                            ,
+                            {
+                                "api": "https://alkalimakersuite-pa.clients6.google.com/$rpc/google.internal.alkali.applications.makersuite.v1.MakerSuiteService/GenerateContent",
+                                "name": "googleAIStudio",
+                                "hostname": "aistudio.google.com",
+                                "enabled": true,
+                                "label": "Google AI Studio"
+                            }
+                         */
+
+                        if (!globalEnableState || !apiOptions.enabled) return requestBody;
+
+                        // requestBody 是数组格式 [model, conversations, config, params, encodedData, lastMessage]
+                        if (!Array.isArray(requestBody) || requestBody.length < 2) return requestBody;
+
+                        const conversations = requestBody[1]; // 对话历史数组
+
+                        // 判断是否为第一次请求：只有一个用户消息且没有模型回复
+                        const isFirstRequest = conversations.length === 1 &&
+                            conversations[0][1] === "user";
+
+                        // 检查是否包含刷新人设标记
+                        const hasRefreshMarker = conversations.some(conv =>
+                            conv[1] === "user" &&
+                            conv[0] &&
+                            conv[0][0] &&
+                            conv[0][0][1] &&
+                            conv[0][0][1].includes("{{刷新人设}}")
+                        );
+
+                        // 如果是第一次请求或包含刷新人设标记，则处理 Prompt
+                        if (isFirstRequest || hasRefreshMarker) {
+                            let newRequestBody = [...requestBody];
+                            let newConversations = [];
+
+                            for (let conversation of conversations) {
+                                if (conversation[1] === "user" && conversation[0] && conversation[0][0] && conversation[0][0][1]) {
+                                    // 处理用户消息
+                                    const originalText = conversation[0][0][1];
+                                    const newText = await formatPrompt(
+                                        originalText.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n'),
+                                        infos
+                                    );
+
+                                    // 创建新的对话结构
+                                    const newConversation = [
+                                        [
+                                            [
+                                                conversation[0][0][0], // 保持原有的 null 或其他值
+                                                newText
+                                            ]
+                                        ],
+                                        conversation[1] // 保持 "user"
+                                    ];
+                                    newConversations.push(newConversation);
+                                } else {
+                                    // 非用户消息或结构不匹配，直接保留
+                                    newConversations.push(conversation);
+                                }
+                            }
+
+                            newRequestBody[1] = newConversations;
+                            return newRequestBody;
+                        }
+
+                        return requestBody;
+                    },
+                    doubao: async (requestBody, apiOptions, globalEnableState, infos) => {
+                        if (!globalEnableState || !apiOptions.enabled) return requestBody;
+
+                        // 双重判断：新对话条件
+                        const isNewConversation = requestBody?.conversation_id === "0" ||
+                            !requestBody?.section_id;
+
+                        // 检查是否包含刷新人设标记
+                        const hasRefreshMarker = requestBody?.messages?.some(msg => {
+                            try {
+                                const contentObj = JSON.parse(msg.content);
+                                return contentObj.text && contentObj.text.includes("{{刷新人设}}");
+                            } catch (e) {
+                                return false;
+                            }
+                        });
+
+                        // 如果是新对话或包含刷新人设标记，则处理 Prompt
+                        if (isNewConversation || hasRefreshMarker) {
+                            let newMessages = [];
+
+                            for (let messageItem of requestBody?.messages) {
+                                try {
+                                    const contentObj = JSON.parse(messageItem.content);
+                                    if (contentObj?.text) {
+                                        const newText = await formatPrompt(
+                                            contentObj.text.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n'),
+                                            infos
+                                        );
+
+                                        newMessages.push({
+                                            ...messageItem,
+                                            content: JSON.stringify({
+                                                ...contentObj,
+                                                text: newText
+                                            })
+                                        });
+                                    } else {
+                                        newMessages.push(messageItem);
+                                    }
+                                } catch (e) {
+                                    // JSON解析失败，保持原样
+                                    newMessages.push(messageItem);
+                                }
+                            }
+
+                            return {
+                                ...requestBody,
+                                messages: newMessages
+                            };
+                        }
+
+                        return requestBody;
+                    }
                 }
                 return await injectList[apiOptions.name](requestBody, apiOptions, globalEnableState, userInfos);
             }
@@ -219,6 +343,7 @@ ${originalPrompt}
                 // 判断当前是不是聊天的接口，是=>true
                 // baseAPI: 实际的API，api_list.api
                 // currentAPI: 当前监控到的API
+                // 判断是基于正在处理的当前的接口是否包含json文件中预设的接口，所以填写配置时可以适当简写。
                 if (!baseAPI || !currentAPI) return false;
                 if (typeof baseAPI === 'string') {
                     return currentAPI.includes(baseAPI);
