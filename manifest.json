@@ -1,0 +1,51 @@
+{
+	"manifest_version": 3,
+	"name": "AIPersonaLoader AI人设加载器",
+	"version": "1.0.0",
+	"description": "无缝将你配置的个人背景信息注入到对话中，确保AI从第一句话就理解你，做出个性化回复。全程无感，正常对话无需额外操作，支持多种AI平台。",
+	"icons":{
+		"16": "img/icon.png",
+		"48": "img/icon.png",
+		"128": "img/icon.png"
+	},
+	"permissions":[
+		"storage",
+		"scripting",
+		"webNavigation"
+	],
+	"host_permissions": [
+		"https://*/*",
+		"http://*/*"
+	],
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["content/ajaxhook.min.js", "content/fetchhook.js"],
+			"run_at": "document_start",
+			"world": "MAIN"
+		},
+		{
+			"matches": ["<all_urls>"],
+			"js": ["content/contentScripts.js"],
+			"run_at": "document_start"
+		}
+	],
+	"action": {
+		"default_popup": "popup.html",
+		"default_icon": "img/icon.png"
+	},
+	"options_ui":{
+		"page": "options/options.html",
+		"open_in_tab": true 
+	},
+	"web_accessible_resources": [
+		{
+			"resources": ["api_list.json"],
+			"matches": ["<all_urls>"]
+		}
+	],
+	"background":{
+		"service_worker": "background.js",
+		"type": "module"
+	}
+}

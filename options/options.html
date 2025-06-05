@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PersonaLoader - 个性化设置</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PersonaLoader 个性化设置</h1>
+            <p>在这里配置您的个人信息、输出规范和记忆内容，打造专属的 AI 体验。</p>
+            <p>当你在被支持的AI网页端中，<strong>开启新对话</strong>时，这些信息会自动注入到你的对话中，AI会基于这些信息与你对话，让AI更懂你。</p>
+            <p>你也可以在AI对话的输入框中输入：<strong id="refresh-prompt">{{刷新人设}}</strong> 然后直接发送，插件会主动在对话中刷新你的个人信息。在对话过长时AI忘记了以前的聊天细节，可以用这个主动在对话中刷新你的人设。</p>
+        </header>
+
+        <main>
+            <section class="config-section">
+                <h2><span class="icon">👤</span>个人信息</h2>
+                <p class="description">AI 将参考这些信息更好地了解您。例如：你的名字、籍贯、工作等等</p>
+                <ul id="infoList" class="item-list">
+                    <!-- 列表项将由 JS 动态生成 -->
+                </ul>
+                <button class="add-button" data-type="info">
+                    <span class="plus-icon">+</span> 添加个人信息
+                </button>
+            </section>
+
+            <section class="config-section">
+                <h2><span class="icon">⚙️</span>输出规范</h2>
+                <p class="description">定义 AI 回答时应遵循的风格和格式要求。例如：简洁的回答、直白的回答等等</p>
+                <ul id="responseFormatList" class="item-list">
+                    <!-- 列表项将由 JS 动态生成 -->
+                </ul>
+                <button class="add-button" data-type="responseFormat">
+                    <span class="plus-icon">+</span> 添加输出规范
+                </button>
+            </section>
+
+            <section class="config-section">
+                <h2><span class="icon">🧠</span>用户记忆内容</h2>
+                <p class="description">记录重要的事件、偏好或AI需要记住的额外事项。例如：2025-06-04 迪丽热巴说喜欢我</p>
+                <ul id="memoryList" class="item-list">
+                    <!-- 列表项将由 JS 动态生成 -->
+                </ul>
+                <button class="add-button" data-type="memory">
+                    <span class="plus-icon">+</span> 添加记忆内容
+                </button>
+            </section>
+        </main>
+
+        <footer>
+            <p>PersonaLoader - 为您的 AI 聊天注入个性！</p>
+        </footer>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h3 id="modalTitle">添加新项目</h3>
+            <textarea id="modalInput" placeholder="请输入内容..." rows="4"></textarea>
+            <div class="modal-actions">
+                <button id="modalCancelButton" class="button-secondary">取消</button>
+                <button id="modalSaveButton" class="button-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

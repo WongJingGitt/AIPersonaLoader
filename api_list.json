@@ -1,0 +1,30 @@
+[
+    {
+        "api": "/api/v0/chat/completion",
+        "name": "deepseek",
+        "hostname": "chat.deepseek.com",
+        "enabled": true,
+        "label": "DeepSeek官网"
+    },
+    {
+        "api": "/api/chat/",
+        "name": "yuanbao",
+        "hostname": "yuanbao.tencent.com",
+        "enabled": true,
+        "label": "腾讯元宝"
+    },
+    {
+        "api": "https://api.tongyi.com/dialog/conversation",
+        "name": "tongyi",
+        "hostname": "www.tongyi.com",
+        "enabled": true,
+        "label": "通义千问"
+    },
+    {
+        "api": ["https://chatgpt.com/backend-api/conversation", "https://chatgpt.com/backend-anon/conversation"],
+        "name": "chatgpt",
+        "hostname": "chatgpt.com",
+        "enabled": true,
+        "label": "ChatGPT"
+    }
+]
