@@ -62,6 +62,7 @@ chrome.webNavigation.onCompleted.addListener(async details => {
                 const onceText = once ? "\n**注意：本次人设仅作用于当前对话，请不要针对这些人设进行添加/修改记忆的行为。**\n" : ""
                 return `你是一位专业的AI助手，专门负责解答用户的各种问题。在解答时需要结合以下内容：
 ${onceText}
+
 ## 核心指令
 1.  **核心任务**: 你的首要任务是综合运用用户的\`个人信息\`、\`你的输出规范\`以及\`用户记忆内容\`，为用户提供高度个性化和相关的回答。
 2.  **优先级规则 - 输出风格冲突**: 当\`用户记忆内容\`中记录的偏好（如对输出丰富程度的偏好）与\`你的输出规范\`在输出风格、格式、长度等方面发生冲突时，你**必须**优先遵循\`你的输出规范\`的要求。例如：
@@ -70,6 +71,12 @@ ${onceText}
     *   **你的输出应该仍然以简洁风格为主。**
 3.  **持续个性化**: 在与用户的整个交互过程中，你都应主动回顾并运用\`个人信息\`、\`输出规范\`和\`用户记忆内容\`，确保每一轮回答都尽可能贴合用户的需求和背景。
 4.  **忠于信息**: \`用户记忆内容\`和\`用户的个人信息\`中记录的内容应被视为事实，除非它们与公认的常识或用户在当前对话中提供的新信息明显矛盾。
+5.  **记忆使用规范**: 使用记忆的目的是为了提供更精准、更贴心的回复，而不是展示你记得什么，因此： 
+    * **紧扣当前**: 你应当**仅在记忆中的信息与用户当前的提问、请求或正在讨论的话题有直接、明显的关联时**，才考虑使用这些记忆。 
+    * **避免无关干扰**: 如果用户的输入是通用性的（如打招呼、询问天气、请求通用知识），或者当前对话内容与记忆中的特定细节（如用户的宠物、爱好、过往经历等）没有直接联系，**你绝对不应主动引入这些记忆信息**。你的回复应聚焦于用户当前表达的需求。 
+    * **举例**: 
+        * **不当使用**: 用户说：“你好”，你不应回复：“你好！你的小猫最近怎么样了？” (除非用户刚刚主动提及小猫)。 
+        * **恰当使用**: 用户问：“我周末想放松一下，有什么建议吗？” 如果记忆中有“用户喜欢安静的活动”，则可以据此推荐。
 
 ## 用户的个人信息
 ${info.join('\n')}
@@ -355,7 +362,7 @@ ${originalPrompt}
             }
 
             // 托管xhr请求
-            const proxyHandler = (config, handler) => {
+            const xhrHandler = (config, handler) => {
                 
                 if (!checkChatAPI(firstApiOption.api, config.url)) {
                     handler.next(config);
@@ -382,29 +389,31 @@ ${originalPrompt}
                             })
                     });
             }
-            
+
             // 托管fetch请求
-            hookFetch({
-                optionsHook: async (config, url) => {
-                    if (!checkChatAPI(firstApiOption.api, url) ) {
-                        return config;
-                    }
-                    // console.log('URL', url)
-                    // console.log('CONFIG', config)
-                    // console.log('------------')
-                    const {apiList, userInfos, globalEnableState} = await getAllData();
-                    let newConfig = { ...config };
-                    const currentHostname = window.location.hostname;
-                    const apiOptions = apiList.find(item => item.hostname === currentHostname);
-                    const currentBody = JSON.parse(config.body || '{}');
-                    const newBody = await inject(currentBody, apiOptions, globalEnableState, userInfos)
-                    newConfig.body = JSON.stringify(newBody);
-                    return newConfig;
+            const fetchHandler = async (config, url) => {
+                if (!checkChatAPI(firstApiOption.api, url) ) {
+                    return config;
                 }
+                // console.log('URL', url)
+                // console.log('CONFIG', config)
+                // console.log('------------')
+                const {apiList, userInfos, globalEnableState} = await getAllData();
+                let newConfig = { ...config };
+                const currentHostname = window.location.hostname;
+                const apiOptions = apiList.find(item => item.hostname === currentHostname);
+                const currentBody = JSON.parse(config.body || '{}');
+                const newBody = await inject(currentBody, apiOptions, globalEnableState, userInfos)
+                newConfig.body = JSON.stringify(newBody);
+                return newConfig;
+            }
+
+            hookFetch({
+                optionsHook: fetchHandler
             })
 
             ah.proxy({
-                onRequest: proxyHandler
+                onRequest: xhrHandler
             })
         },
         world: 'MAIN',
