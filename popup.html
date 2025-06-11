@@ -5,198 +5,246 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PersonaLoader Settings</title>
     <style>
+        :root {
+            --bg-color: #1e2127;
+            --card-color: #282c34;
+            --text-color: #abb2bf;
+            --text-color-muted: #5c6370;
+            --accent-color: #61afef;
+            --accent-color-hover: #5298d8;
+            --border-color: #3e4451;
+            --success-color: #98c379;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 15px;
-            background-color: #282c34; /* Dark background */
-            color: #abb2bf; /* Light grey text */
-            width: 320px; /* Typical popup width */
-            box-sizing: border-box;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            width: 320px;
             max-height: 600px;
+            box-sizing: border-box;
+            animation: fadeIn 0.3s ease-out;
         }
 
         .container {
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
-        .header {
+        /* --- Header Card --- */
+        .header-card {
+            background: linear-gradient(135deg, #2c313a, #282c34);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .header-card h1 {
+            font-size: 22px;
+            margin: 0 0 16px 0;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .master-control {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #3e4451; /* Subtle divider */
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .master-control span {
+            font-size: 14px;
+            font-weight: 500;
         }
 
-        .header h1 {
-            font-size: 18px;
-            margin: 0;
-            color: #61afef; /* Accent color for title */
-        }
-
-        .settings-section {
+        /* --- Site List Section --- */
+        .content-section {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 12px 0; /* No horizontal padding, handled by items */
             display: flex;
             flex-direction: column;
-            gap: 15px;
+        }
+        
+        .section-header {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-color-muted);
+            padding: 0 16px 8px 16px;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .setting-item, .site-item {
+        #siteToggleList {
+            max-height: 220px; /* Adjusted max height */
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+        
+        .site-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            background-color: #323842; /* Slightly lighter card background */
-            border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-top: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .site-item:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .site-item span {
+            font-size: 14px;
         }
         
         .site-item label {
             text-transform: capitalize;
         }
 
-        .setting-item span, .site-item span {
-            font-size: 14px;
-        }
-
-        /* Modern Toggle Switch CSS */
+        /* --- Modern Toggle Switch --- */
         .switch {
             position: relative;
             display: inline-block;
-            width: 44px; /* Smaller width */
-            height: 24px; /* Smaller height */
+            width: 44px;
+            height: 24px;
         }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
+        .switch input { display: none; }
         .slider {
             position: absolute;
             cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #4a505c; /* Off state background */
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3e4451;
             transition: .4s;
-            border-radius: 24px; /* Fully rounded */
+            border-radius: 24px;
         }
-
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px; /* Smaller knob */
-            width: 18px;  /* Smaller knob */
-            left: 3px;    /* Adjust for smaller knob */
-            bottom: 3px;  /* Adjust for smaller knob */
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
             background-color: white;
             transition: .4s;
             border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* --- Action Buttons --- */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        input:checked + .slider {
-            background-color: #61afef; /* Accent color for ON state */
-        }
-
-        input:focus + .slider {
-            box-shadow: 0 0 1px #61afef;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px); /* Adjust for smaller switch */
-        }
-        
-        .site-list-header {
-            font-size: 12px;
-            color: #7c8594;
-            text-transform: uppercase;
-            margin-bottom: -5px; /* Pull list closer */
-        }
-
-        .disabled-item {
-            opacity: 0.6;
-            pointer-events: none; /* Make switches non-interactive when master is off */
-        }
-        .disabled-item .slider {
-             background-color: #404040 !important; /* More muted when disabled */
-        }
-
-        .footer {
-            font-size: 10px;
-            text-align: center;
-            color: #5c6370;
-            padding-top: 10px;
-            border-top: 1px solid #3e4451;
-        }
-
-        #siteToggleList {
-            max-height: 300px;
-            overflow-y: auto;
-            
-        }
-        .options-button {
+        .button {
             width: 100%;
-            height: 40px;
-            background-color: #3e4451;
-            color: white;
-            border: none;
-            border-radius: 5px;
+            height: 42px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
+            font-size: 14px;
+            font-weight: 600;
             text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
+            transition: all 0.2s ease-out;
+            box-sizing: border-box; /* Important for border */
         }
+        
+        .button.primary {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+        }
+        .button.primary:hover {
+            background-color: var(--accent-color-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(97, 175, 239, 0.2);
+        }
+        
+        .button.secondary {
+            background-color: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+        .button.secondary:hover {
+            background-color: var(--card-color);
+            border-color: var(--text-color);
+        }
+        
+        .button:disabled {
+            background-color: var(--success-color) !important;
+            cursor: default;
+            transform: none;
+            box-shadow: none;
+            color: white;
+            border: none;
+        }
+
+        /* --- Disabling state --- */
+        .disabled-item {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .disabled-item .slider {
+             background-color: #404040 !important;
+        }
+        
+        /* --- Custom Scrollbar --- */
+        #siteToggleList::-webkit-scrollbar { width: 6px; }
+        #siteToggleList::-webkit-scrollbar-track { background: transparent; }
+        #siteToggleList::-webkit-scrollbar-thumb {
+            background-color: #4a505c;
+            border-radius: 6px;
+        }
+        #siteToggleList::-webkit-scrollbar-thumb:hover { background-color: #5c6370; }
+        
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>PersonaLoader</h1>
-        </div>
 
-        <div class="settings-section">
-            <div class="setting-item">
-                <span>自动注入(全局开关)</span>
+        <!-- Header Card: Contains title and global switch -->
+        <div class="header-card">
+            <h1>PersonaLoader</h1>
+            <div class="master-control">
+                <span>自动注入 (全局开关)</span>
                 <label class="switch">
                     <input type="checkbox" id="globalEnableToggle">
                     <span class="slider"></span>
                 </label>
             </div>
         </div>
-        
-        <div class="settings-section" id="siteListSection">
-            <div class="site-list-header">指定网站开关(支持的网站)</div>
+
+        <!-- Content Section: Contains the scrollable site list -->
+        <div class="content-section" id="siteListSection">
+            <div class="section-header">支持的网站</div>
             <div id="siteToggleList">
-                <!-- Site toggles will be dynamically inserted here -->
-                <!-- Example:
-                <div class="site-item">
-                    <span>DeepSeek</span>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle_deepseek">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                -->
+                <!-- Site toggles will be dynamically inserted here by popup.js -->
             </div>
         </div>
 
-        <button id="openOptionsButton" class="options-button">详细设置 & 信息管理</button>
-
-        <div class="footer">
-            PersonaLoader v1.0
+        <!-- Action Buttons: Contains the two main user actions -->
+        <div class="action-buttons">
+            <button id="copyPromptButton" class="button primary">一键复制完整Prompt</button>
+            <button id="openOptionsButton" class="button secondary">详细设置 & 信息管理</button>
         </div>
-    </div>
 
+    </div>
     <script src="popup.js"></script> 
 </body>
 </html>
