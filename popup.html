@@ -85,17 +85,35 @@
         }
         #personaSelect {
             width: 100%;
-            padding: 8px 12px;
+            padding: 8px 35px 8px 12px; /* 右侧留出箭头空间 */
             border-radius: 6px;
             border: 1px solid var(--border-color-soft);
             background-color: #f6f8fa;
             font-family: inherit;
             font-size: 14px;
             cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="none" stroke="%23607D8B" stroke-width="2" stroke-linecap="round" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            transition: background-image 0.3s cubic-bezier(0.68, -0.6, 0.32, 1.6);
         }
+
         #personaSelect:focus {
             outline: none;
             border-color: var(--accent-color);
+            background-image: url('data:image/svg+xml;utf8,<svg fill="none" stroke="%230078ff" stroke-width="2" stroke-linecap="round" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 15l5-5 5 5"/></svg>');
+        }
+
+        #personaSelect option {
+            padding: 8px 12px;
+            background: #fff;
+            color: #333;
+        }
+        #personaSelect option:hover {
+            background: var(--accent-color) !important;
+            color: white;
         }
 
         .action-buttons { display: flex; flex-direction: column; gap: 10px; }
