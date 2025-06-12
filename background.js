@@ -1,25 +1,29 @@
+// 已更新：与其他文件保持一致的标准化函数
 const getApiListData = async () => {
-    const storageApiList = await chrome.storage.local.get(["persona_loader_api_list"])
+    const storageApiList = await chrome.storage.local.get(["persona_loader_api_list"]);
     const apilistURL = await chrome.runtime.getURL('api_list.json');
     let fileApiList = await fetch(apilistURL).then(res => res.json());
-    if (!storageApiList?.persona_loader_api_list) {
+
+    const storedList = storageApiList?.persona_loader_api_list;
+
+    if (!storedList) {
         await chrome.storage.local.set({ persona_loader_api_list: fileApiList });
         return fileApiList;
     }
 
-    if (fileApiList.length !== storageApiList?.persona_loader_api_list?.length) {
-        fileApiList = fileApiList.map(item => {
-            const storageItem = storageApiList?.persona_loader_api_list?.find(i => i.hostname === item.hostname);
+    if (fileApiList.length !== storedList.length) {
+        fileApiList = fileApiList.map(fileItem => {
+            const storageItem = storedList.find(i => i.hostname === fileItem.hostname);
             if (storageItem) {
-                item.enabled = storageItem.enabled;
+                fileItem.enabled = storageItem.enabled;
             }
-            return item;
+            return fileItem;
         });
         await chrome.storage.local.set({ "persona_loader_api_list": fileApiList });
         return fileApiList;
     }
 
-    return storageApiList?.persona_loader_api_list;
+    return storedList;
 };
 
 
