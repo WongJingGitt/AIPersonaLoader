@@ -205,8 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.activePersonaId = id;
         
         // 更新本地 state 和 manifest 存储
-        state.allPersonas.forEach(p => p.isActive = p.id === id);
-        await storage.saveManifest({ personas: state.allPersonas, activePersonaId: id });
+        // 在options页面选中时不应该激活这个人设，对交互不友好。应该保证唯一的选择入口在popup里面，增加用户的操作自信
+        // state.allPersonas.forEach(p => p.isActive = p.id === id);
+        // await storage.saveManifest({ personas: state.allPersonas, activePersonaId: id });
         
         renderPersonaList();
         updateRightPanel();
