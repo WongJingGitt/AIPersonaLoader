@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputModalContext = { type };
         elements.inputModalTitle.textContent = `添加新的${sections[type].title}`;
         elements.modalInput.value = '';
-        elements.modalInput.placeholder = `请输入新的${sections[type].title}...`;
+        elements.modalInput.placeholder = `请输入新的${sections[type].title}，或是粘贴一键复制的内容...`;
         elements.inputModal.style.display = 'flex';
         setTimeout(() => elements.modalInput.focus(), 50);
     }
@@ -301,7 +301,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const items = await storage.getData(state.activePersonaId, type);
-        items.push(text);
+
+        try {
+            const parsedData = JSON.parse(text)
+            if (Array.isArray(parsedData)) {
+                const parseDataWithoutDuplicates = parsedData.filter(item => !items.includes(item));
+                items.push(...parseDataWithoutDuplicates);
+            } else {
+                items.push(parsedData);
+            }
+        } catch (e) {
+            items.push(text);
+        }
+
         await storage.saveData(state.activePersonaId, type, items);
         
         renderActiveTabContent();
@@ -350,10 +362,45 @@ document.addEventListener('DOMContentLoaded', () => {
         updateRightPanel();
     }
 
+    function copyToClipboard(text) {
+        if (navigator.clipboard) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            return new Promise((resolve, reject) => {
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = 0;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    resolve();
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+    }
+
+    async function handleCopyItems(itemType) {
+        const activePersonaId = state.activePersonaId;
+        const items = await storage.getData(activePersonaId, itemType);
+        copyToClipboard(JSON.stringify(items))
+            .then(() => toast('已复制到剪贴板！'))
+            .catch(() => toast('复制失败!'));
+    }
+
     function bindEvents() {
         elements.addPersonaButton.addEventListener('click', handleAddPersona);
         elements.tabNav.addEventListener('click', handleTabClick);
-        
+
+        document.querySelectorAll('.copy-button').forEach(btn => {
+            btn.addEventListener('click', () => handleCopyItems(btn.dataset.type));
+        })
+
         document.querySelectorAll('.add-button').forEach(btn => {
             btn.addEventListener('click', () => openInputModal(btn.dataset.type));
         });
@@ -382,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         elements.refreshPrompt.onclick = () => {
-            navigator.clipboard.writeText("{{刷新人设}}")
+            copyToClipboard("{{刷新人设}}")
                 .then(() => toast('复制成功！'))
                 .catch(() => toast('复制失败！'));
         };
