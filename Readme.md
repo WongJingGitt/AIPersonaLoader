@@ -62,6 +62,7 @@
 *   [通义千问](https://www.tongyi.com/)
 *   [豆包AI](https://www.doubao.com/chat/)
 *   [ChatGPT](https://chatgpt.com/)
+*   [Grok](https://grok.com/)
 *   *更多平台适配中...*
 
 ## 🛠️ 使用方式

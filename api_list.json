@@ -33,5 +33,12 @@
         "hostname": "www.doubao.com",
         "enabled": true,
         "label": "豆包"
+    },
+    {
+        "api": "/rest/app-chat/conversations/new",
+        "name": "grok",
+        "hostname": "grok.com",
+        "enabled": true,
+        "label": "Grok"
     }
 ]

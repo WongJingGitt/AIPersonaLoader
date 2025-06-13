@@ -333,7 +333,23 @@ ${originalPrompt}
                         }
 
                         return requestBody;
-                    }
+                    },
+                    grok:  async (requestBody, apiOptions, globalEnableState, infos) => { 
+                        if (!globalEnableState || !apiOptions.enabled) return requestBody;
+                        // Grok的新对话用的是单独的接口，所以不用判断新旧对话
+                        try {
+                            const newBody = {...requestBody}
+                            const newPrompt = await formatPrompt(
+                                newBody.message.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n'),
+                                infos,
+                                true
+                            );
+                            newBody.message = newPrompt;
+                            return newBody;
+                        } catch (e) {
+                            return requestBody;
+                        }
+                    },
                 }
                 return await injectList[apiOptions.name](requestBody, apiOptions, globalEnableState, userInfos);
             }
@@ -399,9 +415,6 @@ ${originalPrompt}
                 if (!checkChatAPI(firstApiOption.api, url) ) {
                     return config;
                 }
-                // console.log('URL', url)
-                // console.log('CONFIG', config)
-                // console.log('------------')
                 const {apiList, userInfos, globalEnableState} = await getAllData();
                 let newConfig = { ...config };
                 const currentHostname = window.location.hostname;

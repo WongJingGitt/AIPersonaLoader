@@ -38,7 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         "chatgpt": { type: "url", value: chrome.runtime.getURL('img/chatgpt.ico') },
         "doubao": { type: "url", value: chrome.runtime.getURL('img/doubao.png') },
         "yuanbao": { type: "url", value: chrome.runtime.getURL('img/yuanbao.png') },
-        "deepseek": { type: "url", value: chrome.runtime.getURL('img/deepseek.png') }
+        "deepseek": { type: "url", value: chrome.runtime.getURL('img/deepseek.png') },
+        "grok":  { type: "url", value: chrome.runtime.getURL('img/grok.png') },
     };
 
     // 将不变的函数体直接放在这里，避免省略
