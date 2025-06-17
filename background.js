@@ -66,7 +66,6 @@ chrome.webNavigation.onCompleted.addListener(async details => {
                 const onceText = once ? "\n**注意：本次人设仅作用于当前对话，请不要针对这些人设进行添加/修改记忆的行为。**\n" : ""
                 return `你是一位专业的AI助手，专门负责解答用户的各种问题。在解答时需要结合以下内容：
 ${onceText}
-
 ## 核心指令
 1.  **核心任务**: 你的首要任务是综合运用用户的\`个人信息\`、\`你的输出规范\`以及\`用户记忆内容\`，为用户提供高度个性化和相关的回答。
 2.  **优先级规则 - 输出风格冲突**: 当\`用户记忆内容\`中记录的偏好（如对输出丰富程度的偏好）与\`你的输出规范\`在输出风格、格式、长度等方面发生冲突时，你**必须**优先遵循\`你的输出规范\`的要求。例如：
@@ -81,6 +80,10 @@ ${onceText}
     * **举例**: 
         * **不当使用**: 用户说：“你好”，你不应回复：“你好！你的小猫最近怎么样了？” (除非用户刚刚主动提及小猫)。 
         * **恰当使用**: 用户问：“我周末想放松一下，有什么建议吗？” 如果记忆中有“用户喜欢安静的活动”，则可以据此推荐。
+6.  **当前时间**: 当前时间是：${new Date().toLocaleString()}，星期${['日','一','二','三','四','五','六'][new Date().getDay()]}。时间的使用规范：
+    *   **若你的开发者提供了时间获取方式、或者在线搜索功能**: 请优先使用开发者提供的时间获取方式，获取当前时间。或者通过在线搜索获取当前时间。
+    *   **若你的开发者没有提供时间获取方式、或者在线搜索功能**: 请使用上面的时间作为参考。          
+    **再次提醒：同一个对话可以会时跨多天进行持续对话，因此涉及到时间优先使用你的开发者为你提供的时间获取方式、或者在线搜索实时时间。上面提到的时间仅作为最后的兜底参考。**
 
 ## 用户的个人信息
 ${info.join('\n')}
@@ -101,9 +104,9 @@ ${originalPrompt}
             
             // 核心注入逻辑处理，后续增加、修改维护这里即可
             // 接收body返回修改后的body
-            async function inject(requestBody, apiOptions, globalEnableState, userInfos) {
+            async function inject(requestBody, apiOptions, globalEnableState, userInfos, headers, url) {
                 const injectList = {
-                    yuanbao: async (requestBody, apiOptions, globalEnableState, infos) => {
+                    yuanbao: async (requestBody, apiOptions, globalEnableState, infos, headers, url) => {
                         if (!globalEnableState || !apiOptions.enabled) return requestBody;
                         if (requestBody?.chatModelExtInfo || requestBody?.prompt?.includes("{{刷新人设}}")) {
                             const prompt = requestBody?.prompt?.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n')
@@ -117,7 +120,7 @@ ${originalPrompt}
                         }
                         return requestBody;
                     },
-                    deepseek: async (requestBody, apiOptions, globalEnableState, infos) => {
+                    deepseek: async (requestBody, apiOptions, globalEnableState, infos, headers, url) => {
                         if (!globalEnableState || !apiOptions.enabled) return requestBody;
                         if (!requestBody?.parent_message_id || requestBody.prompt?.includes("{{刷新人设}}")) {
                             const prompt = requestBody?.prompt?.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n')
@@ -128,7 +131,7 @@ ${originalPrompt}
                         }
                         return requestBody;
                     },
-                    tongyi: async (requestBody, apiOptions, globalEnableState, infos) => {
+                    tongyi: async (requestBody, apiOptions, globalEnableState, infos, headers, url) => {
                         if (!globalEnableState || !apiOptions.enabled) return requestBody;
                         if (!requestBody?.sessionId || requestBody.prompt?.includes("{{刷新人设}}")) {
                             let newContent = [];
@@ -147,7 +150,7 @@ ${originalPrompt}
                         }    
                         return requestBody;
                     },
-                    chatglm:  async (requestBody, apiOptions, globalEnableState, infos) => { 
+                    chatglm:  async (requestBody, apiOptions, globalEnableState, infos, headers, url) => { 
                         /*
                             TODO 未知原因导致网站会话列表点击无响应，接口是有正常响应的
                             {
@@ -181,9 +184,10 @@ ${originalPrompt}
                         }
                         return requestBody;   
                     },
-                    chatgpt: async (requestBody, apiOptions, globalEnableState, infos) => { 
+                    chatgpt: async (requestBody, apiOptions, globalEnableState, infos, headers, url) => { 
                         if (!globalEnableState || !apiOptions.enabled) return requestBody;
                         if (!requestBody?.conversation_id || requestBody.prompt?.includes("{{刷新人设}}") || requestBody?.parent_message_id === "client-created-root") {
+                            console.log('chatgpt', requestBody)
                             let newMessages = [];                            
                             for (let messageItem of requestBody?.messages) {
                                 if (!messageItem?.author?.role === "user" || messageItem.content.content_type !== "text") {
@@ -210,7 +214,7 @@ ${originalPrompt}
                         }
                         return requestBody;
                     },
-                    googleAIStudio: async (requestBody, apiOptions, globalEnableState, infos) => {
+                    googleAIStudio: async (requestBody, apiOptions, globalEnableState, infos, headers, url) => {
                         /*
                             Google AI Studio对请求有加密验证，修改Prompt，会导致请求失败 403
                             ,
@@ -280,7 +284,7 @@ ${originalPrompt}
 
                         return requestBody;
                     },
-                    doubao: async (requestBody, apiOptions, globalEnableState, infos) => {
+                    doubao: async (requestBody, apiOptions, globalEnableState, infos, headers, url) => {
                         if (!globalEnableState || !apiOptions.enabled) return requestBody;
 
                         // 双重判断：新对话条件
@@ -334,24 +338,27 @@ ${originalPrompt}
 
                         return requestBody;
                     },
-                    grok:  async (requestBody, apiOptions, globalEnableState, infos) => { 
+                    grok:  async (requestBody, apiOptions, globalEnableState, infos, headers, url) => { 
                         if (!globalEnableState || !apiOptions.enabled) return requestBody;
-                        // Grok的新对话用的是单独的接口，所以不用判断新旧对话
-                        try {
-                            const newBody = {...requestBody}
-                            const newPrompt = await formatPrompt(
-                                newBody.message.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n'),
-                                infos,
-                                true
-                            );
-                            newBody.message = newPrompt;
-                            return newBody;
-                        } catch (e) {
-                            return requestBody;
+                        
+                        if (url?.includes('/new') || requestBody?.message?.includes("{{刷新人设}}")) {
+                            try {
+                                const newBody = {...requestBody}
+                                const newPrompt = await formatPrompt(
+                                    newBody.message.replace(/{{刷新人设}}/g, '这是我最新的信息，请你先忘记之前关于我的信息，然后以这份信息为准。\n\n'),
+                                    infos,
+                                    true
+                                );
+                                newBody.message = newPrompt;
+                                return newBody;
+                            } catch (e) {
+                                return requestBody;
+                            }
                         }
+                        return requestBody;
                     },
                 }
-                return await injectList[apiOptions.name](requestBody, apiOptions, globalEnableState, userInfos);
+                return await injectList[apiOptions.name](requestBody, apiOptions, globalEnableState, userInfos, headers, url);
             }
 
 
@@ -375,6 +382,8 @@ ${originalPrompt}
                 if (typeof baseAPI === 'string') {
                     return currentAPI.includes(baseAPI);
                 }
+                console.log('baseAPI', baseAPI)
+                console.log('currentAPI', currentAPI)
                 if (Array.isArray(baseAPI)) {
                     return baseAPI.some(item => item.includes(currentAPI))
                 }
@@ -397,7 +406,7 @@ ${originalPrompt}
                         const apiOptions = apiList.find(item => item.hostname === currentHostname);
                         const currentBody = JSON.parse(config.body || '{}');
 
-                        inject(currentBody, apiOptions, globalEnableState, userInfos)
+                        inject(currentBody, apiOptions, globalEnableState, userInfos, config?.headers, config?.url)
                             .then(newBody => { 
                                 console.log('BODY', newBody)
                                 newConfig.body = JSON.stringify(newBody);
@@ -420,7 +429,7 @@ ${originalPrompt}
                 const currentHostname = window.location.hostname;
                 const apiOptions = apiList.find(item => item.hostname === currentHostname);
                 const currentBody = JSON.parse(config.body || '{}');
-                const newBody = await inject(currentBody, apiOptions, globalEnableState, userInfos)
+                const newBody = await inject(currentBody, apiOptions, globalEnableState, userInfos, config?.headers, url)
                 newConfig.body = JSON.stringify(newBody);
                 return newConfig;
             }

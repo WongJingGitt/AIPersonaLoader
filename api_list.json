@@ -21,7 +21,7 @@
         "label": "通义千问"
     },
     {
-        "api": ["https://chatgpt.com/backend-api/conversation", "https://chatgpt.com/backend-anon/conversation"],
+        "api": ["https://chatgpt.com/backend-api/conversation", "https://chatgpt.com/backend-anon/conversation", "https://chatgpt.com/backend-api/f/conversation"],
         "name": "chatgpt",
         "hostname": "chatgpt.com",
         "enabled": true,
@@ -35,7 +35,7 @@
         "label": "豆包"
     },
     {
-        "api": "/rest/app-chat/conversations/new",
+        "api": "https://grok.com/rest/app-chat/conversations",
         "name": "grok",
         "hostname": "grok.com",
         "enabled": true,
