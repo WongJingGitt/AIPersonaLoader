@@ -158,6 +158,15 @@
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: #323232; color: white; border-radius: 6px; z-index: 1001; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: toast-in 0.3s ease-out, toast-out 0.3s ease-in 1.7s; }
         @keyframes toast-in { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
         @keyframes toast-out { from { opacity: 1; } to { opacity: 0; } }
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content:  space-between;
+        }
+        .button-group-item { flex: 1}
+        .button-group-item-button { width: 100%; }
     </style>
 </head>
 <body>
@@ -184,7 +193,14 @@
 
             <div class="panel-bottom">
                  <div class="action-buttons">
-                    <button id="copyPromptButton" class="button primary">一键复制当前人设</button>
+                    <div class="button-group">
+                        <div class="button-group-item">
+                            <button id="copyRefreshPrompt" class="button secondary">复制刷新文案</button>
+                        </div>
+                        <div class="button-group-item">
+                            <button id="copyPromptButton" class="button primary">复制人设文案</button>
+                        </div>
+                    </div>
                     <button id="openOptionsButton" class="button secondary">详细设置 & 人设管理</button>
                 </div>
             </div>

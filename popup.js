@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openOptionsButton = document.getElementById('openOptionsButton');
     const copyPromptButton = document.getElementById('copyPromptButton');
     const personaSelect = document.getElementById('personaSelect'); // 新增
+    const copyRefreshButton = document.getElementById('copyRefreshPrompt');
 
     let API_LIST = [];
 
@@ -75,7 +76,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const onceText = once ? "\n**注意：本次人设仅作用于当前对话，请不要针对这些人设进行添加/修改记忆的行为。**\n" : ""
         return `你是一位专业的AI助手，专门负责解答用户的各种问题。在解答时需要结合以下内容：
 ${onceText}
-
 ## 核心指令
 1.  **核心任务**: 你的首要任务是综合运用用户的\`个人信息\`、\`你的输出规范\`以及\`用户记忆内容\`，为用户提供高度个性化和相关的回答。
 2.  **优先级规则 - 输出风格冲突**: 当\`用户记忆内容\`中记录的偏好（如对输出丰富程度的偏好）与\`你的输出规范\`在输出风格、格式、长度等方面发生冲突时，你**必须**优先遵循\`你的输出规范\`的要求。例如：
@@ -90,6 +90,10 @@ ${onceText}
     * **举例**: 
     * **不当使用**: 用户说：“你好”，你不应回复：“你好！你的小猫最近怎么样了？” (除非用户刚刚主动提及小猫)。 
     * **恰当使用**: 用户问：“我周末想放松一下，有什么建议吗？” 如果记忆中有“用户喜欢安静的活动”，则可以据此推荐。
+6.  **当前时间**: 当前时间是：${new Date().toLocaleString()}，星期${['日','一','二','三','四','五','六'][new Date().getDay()]}。时间的使用规范：
+    *   **若你的开发者提供了时间获取方式、或者在线搜索功能**: 请优先使用开发者提供的时间获取方式，获取当前时间。或者通过在线搜索获取当前时间。
+    *   **若你的开发者没有提供时间获取方式、或者在线搜索功能**: 请使用上面的时间作为参考。          
+    **再次提醒：同一个对话可以会时跨多天进行持续对话，因此涉及到时间优先使用你的开发者为你提供的时间获取方式、或者在线搜索实时时间。上面提到的时间仅作为最后的兜底参考。**
 
 ## 用户的个人信息
 ${info.join('\n')}
@@ -207,7 +211,7 @@ ${memory.join('\n')}
                 await navigator.clipboard.writeText(fullPrompt);
                 
                 const originalText = copyPromptButton.textContent;
-                copyPromptButton.textContent = '已复制到剪贴板!';
+                copyPromptButton.textContent = '已复制!';
                 copyPromptButton.disabled = true;
 
                 setTimeout(() => {
@@ -220,6 +224,24 @@ ${memory.join('\n')}
                 copyPromptButton.textContent = '复制失败!';
                 setTimeout(() => {
                     copyPromptButton.textContent = "一键复制当前人设";
+                }, 2000);
+            }
+        });
+    }
+
+    if (copyRefreshButton) {
+        copyRefreshButton.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText("{{刷新人设}}");
+                copyRefreshButton.textContent = '已复制!';
+                copyRefreshButton.disabled = true;
+            } catch (error) {
+                console.error("PersonaLoader: Error copying prompt to clipboard", error);
+                copyRefreshButton.textContent = '复制失败!';
+            } finally {
+                setTimeout(() => {
+                    copyRefreshButton.textContent = "复制刷新文案";
+                    copyRefreshButton.disabled = false;
                 }, 2000);
             }
         });
