@@ -59,9 +59,9 @@ chrome.webNavigation.onCompleted.addListener(async details => {
 
             // Prompt格式化函数
             async function formatPrompt(originalPrompt, loadedUserConfig, once) {
-                const info = loadedUserConfig?.userInfo_info?.map(item => `- ${item}`) || ['- 用户暂未提供个人信息'];
-                const responseFormat = loadedUserConfig?.userInfo_responseFormat?.map(item => `- ${item}`) || ['- 用户暂未对输出做出特殊要求，请你按照默认规范输出即可。'];
-                const memory = loadedUserConfig?.userInfo_memory?.map(item => `- ${item}`) || ['- 用户暂未提供记忆内容'];
+                const info = loadedUserConfig?.userInfo_info || ['- 用户暂未提供个人信息'];
+                const responseFormat = loadedUserConfig?.userInfo_responseFormat || ['- 用户暂未对输出做出特殊要求，请你按照默认规范输出即可。'];
+                const memory = loadedUserConfig?.userInfo_memory || ['- 用户暂未提供记忆内容'];
                 
                 const onceText = once ? "\n**注意：本次人设仅作用于当前对话，请不要针对这些人设进行添加/修改记忆的行为。**\n" : ""
                 return `你是一位专业的AI助手，专门负责解答用户的各种问题。在解答时需要结合以下内容：
