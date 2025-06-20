@@ -1,4 +1,4 @@
-/* options.css (v3) */
+/* options.css (v3) -> (v4.1 with improved Tooltip) */
 :root {
     --bg-color: #f7f7f8;
     --panel-color: #ffffff;
@@ -137,12 +137,12 @@ body {
     transform: translateX(0);
 }
 .tab-pane .description { font-size: 13px; color: var(--text-color-muted); margin: 0 0 16px 0; }
-.item-list { list-style: none; padding: 0; margin: 0 0 16px 0; flex-grow: 1; overflow-y: auto; }
+.item-list { list-style: none; padding: 0 5px; margin: 0 0 16px 0; flex-grow: 1; overflow-y: auto; }
 
 .item-list li {
     display: flex;
     justify-content: space-between;
-    align-items: center; /*  <-- 主要改动 */
+    align-items: center;
     background-color: #f7f7f8;
     padding: 10px 12px;
     border: 1px solid var(--border-color);
@@ -162,7 +162,7 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    line-height: 0; /* 让图标垂直居中 */
+    line-height: 0;
     transition: background-color 0.2s, color 0.2s;
     flex-shrink: 0;
 }
@@ -187,21 +187,21 @@ body {
 .button-group-item { flex: 1}
 .button-group-item-button { width: 100%; }
 
-/* --- 模态框 (输入 + 确认) --- */
+/* --- 模态框 (通用) --- */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s ease; align-items: center; justify-content: center; }
-.modal-content { background-color: var(--panel-color); padding: 24px 30px; border: none; width: 90%; max-width: 500px; border-radius: var(--border-radius); box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideIn 0.3s ease-out; text-align: center; }
+.modal-content { background-color: var(--panel-color); padding: 24px 30px; border: none; width: 90%; max-width: 520px; border-radius: var(--border-radius); box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; animation: slideIn 0.3s ease-out; text-align: center; display: flex; flex-direction: column; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideIn { from { transform: translateY(-30px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 .modal-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
 .modal-icon { font-size: 28px; line-height: 1; }
 .modal-title { margin: 0; font-size: 1.5em; color: var(--text-color); }
-.modal-body { margin: 8px 0 24px 0; color: var(--text-color-muted); line-height: 1.5; text-align: center; }
+.modal-body { margin: 8px 0 24px 0; color: var(--text-color-muted); line-height: 1.5; text-align: center; flex-grow: 1; overflow-y: auto; max-height: 60vh; }
 .modal-body-left-align { text-align: left; background: #f7f7f8; padding: 12px; border-radius: 6px; max-height: 150px; overflow-y: auto; }
 #modalInput { width: 100%; box-sizing: border-box; padding: 10px; margin: 16px 0; border: 1px solid var(--border-color); border-radius: 6px; font-family: var(--font-family); font-size: 14px; min-height: 120px; resize: vertical; }
-.modal-actions { display: flex; justify-content: center; gap: 12px; }
+.modal-actions { display: flex; justify-content: center; gap: 12px; margin-top: auto; padding-top: 16px;}
 
 /* --- Toast 通知 --- */
-.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #323232; color: white; border-radius: 6px; z-index: 1001; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: toast-in 0.3s ease-out, toast-out 0.3s ease-in 2.7s; }
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #323232; color: white; border-radius: 6px; z-index: 2001; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: toast-in 0.3s ease-out, toast-out 0.3s ease-in 2.7s; }
 @keyframes toast-in { from { transform: translate(-50%, -20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 @keyframes toast-out { from { opacity: 1; } to { opacity: 0; } }
 
@@ -210,3 +210,60 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background-color: #dde1e6; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background-color: #cfd5dc; }
+
+/* --- 灵感中心 (推荐模态框) --- */
+.recommend-item-list { list-style: none; padding: 0; margin: 0; text-align: left; padding: 10px 5px;}
+.recommend-item-list li { background-color: #f7f7f8; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 8px; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+.recommend-item-list li:hover { background-color: #f0f2f5; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); border-color: var(--accent-color); border-left-width: 4px; }
+
+/* --- 风格模板样式 --- */
+.style-template-list { list-style: none; padding: 0; margin: 0; text-align: left; padding: 10px 5px;}
+.style-template-item { background-color: #f7f7f8; padding: 16px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s ease; }
+.style-template-item:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.07); border-color: var(--accent-color); }
+.style-template-name { font-weight: 600; font-size: 16px; color: var(--text-color); margin: 0 0 6px 0; }
+.style-template-desc { font-size: 13px; color: var(--text-color-muted); margin: 0; }
+
+/* --- MODIFIED: 风格模板预览浮窗 (Tooltip) --- */
+#promptTooltip {
+    position: fixed; /* 使用 fixed 定位，相对于视口 */
+    width: 280px;
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: var(--panel-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+    padding: 12px;
+    z-index: 2000; /* 高于模态框的 z-index */
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none; /* 初始状态下不响应鼠标事件 */
+}
+#promptTooltip.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+    pointer-events: auto; /* 可见时响应鼠标事件 */
+}
+#promptTooltip ul { list-style: disc; margin: 0; padding-left: 20px; }
+#promptTooltip li { font-size: 13px; margin-bottom: 8px; color: var(--text-color); word-break: break-word; }
+#promptTooltip li:last-child { margin-bottom: 0; }
+
+/* --- 风格模板详情页 --- */
+.template-detail-view .modal-body { text-align: left; }
+.template-detail-view .modal-actions { justify-content: space-between; }
+.template-detail-preview-list { list-style: none; padding: 0; margin: 0; background: #f7f7f8; border-radius: 6px; padding: 8px; }
+.template-detail-preview-list li { padding: 8px 12px; font-size: 14px; border-bottom: 1px solid #e5e7eb; }
+.template-detail-preview-list li:last-child { border-bottom: none; }
+
+/* --- NEW: 模态框内的提示文案 --- */
+.modal-description {
+    font-size: 14px;
+    color: var(--text-color-muted);
+    margin-top: 4px;      /* 与标题的间距 */
+    margin-bottom: 20px;  /* 与下方内容的间距 */
+    text-align: center;
+    line-height: 1.5;
+}

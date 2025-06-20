@@ -9,6 +9,7 @@
 <body>
     <div class="container">
 
+        <!-- (其余内容保持不变) -->
         <!-- 左侧侧边栏：人设列表 -->
         <aside class="sidebar">
             <h2>我的全部人设</h2>
@@ -41,10 +42,13 @@
                         <ul id="infoList" class="item-list"></ul>
                         <div class="button-group">
                             <div class="button-group-item">
-                                <button class="copy-button button secondary button-group-item-button" data-type="info">一键复制当前信息</button>
+                                <button class="recommend-button button secondary button-group-item-button" data-type="info">✨ 灵感中心</button>
+                            </div>
+                             <div class="button-group-item">
+                                <button class="copy-button button secondary button-group-item-button" data-type="info">批量复制/导出</button>
                             </div>
                             <div class="button-group-item">
-                                <button class="add-button button secondary button-group-item-button" data-type="info">添加信息</button>
+                                <button class="add-button button secondary button-group-item-button" data-type="info">添加/批量导入</button>
                             </div>
                         </div>
                     </div>
@@ -53,10 +57,13 @@
                         <ul id="responseFormatList" class="item-list"></ul>
                         <div class="button-group">
                             <div class="button-group-item">
-                                <button class="copy-button button secondary button-group-item-button" data-type="responseFormat">一键复制当前规范</button>
+                                <button class="recommend-button button secondary button-group-item-button" data-type="responseFormat">✨ 灵感中心</button>
                             </div>
                             <div class="button-group-item">
-                                <button class="add-button button secondary button-group-item-button" data-type="responseFormat">添加规范</button>
+                                <button class="copy-button button secondary button-group-item-button" data-type="responseFormat">批量复制/导出</button>
+                            </div>
+                            <div class="button-group-item">
+                                <button class="add-button button secondary button-group-item-button" data-type="responseFormat">添加/批量导入</button>
                             </div>
                         </div>
                     </div>
@@ -65,10 +72,13 @@
                         <ul id="memoryList" class="item-list"></ul>
                         <div class="button-group">
                             <div class="button-group-item">
-                                <button class="copy-button button secondary button-group-item-button" data-type="memory">一键复制当前记忆</button>
+                                <button class="recommend-button button secondary button-group-item-button" data-type="memory">✨ 灵感中心</button>
                             </div>
                             <div class="button-group-item">
-                                <button class="add-button button secondary button-group-item-button" data-type="memory">添加记忆</button>
+                                <button class="copy-button button secondary button-group-item-button" data-type="memory">批量复制/导出</button>
+                            </div>
+                            <div class="button-group-item">
+                                <button class="add-button button secondary button-group-item-button" data-type="memory">添加/批量导入</button>
                             </div>
                         </div>
                     </div>
@@ -103,6 +113,21 @@
             </div>
         </div>
     </div>
+
+    <!-- 推荐/风格模板 模态框 (通用容器) -->
+    <div id="recommendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-icon">✨</span>
+                <h3 id="recommendModalTitle" class="modal-title"></h3>
+            </div>
+            <div id="recommendModalBody" class="modal-body"></div>
+            <div id="recommendModalActions" class="modal-actions"></div>
+        </div>
+    </div>
+
+    <!-- NEW: 全局唯一的 Tooltip 元素 -->
+    <div id="promptTooltip"></div>
 
     <script src="options.js"></script>
 </body>
