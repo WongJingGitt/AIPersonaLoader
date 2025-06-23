@@ -78,12 +78,20 @@ const getPersonaManifest = async () => {
     return manifest.persona_manifest;
 }
 
-async function formatPrompt(loadedUserConfig, once) {
+async function formatPrompt(loadedUserConfig, once, fromInputEnhancer) {
     const info = loadedUserConfig?.userInfo_info || ['- 用户暂未提供个人信息'];
     const responseFormat = loadedUserConfig?.userInfo_responseFormat || ['- 用户暂未对输出做出特殊要求，请你按照默认规范输出即可。'];
     const memory = loadedUserConfig?.userInfo_memory || ['- 用户暂未提供记忆内容'];
     
     const onceText = once ? "\n**注意：本次人设仅作用于当前对话，请不要针对这些人设进行添加/修改记忆的行为。**\n" : ""
+    const inputEnhancerText = `
+
+-----
+
+## 用户提问，以下是用户的初始问题：
+
+`
+
     return `你是一位专业的AI助手，专门负责解答用户的各种问题。在解答时需要结合以下内容：
 ${onceText}
 ## 核心指令
@@ -113,7 +121,9 @@ ${responseFormat.join('\n')}
 
 ## 用户记忆内容
 ${memory.join('\n')}
+${fromInputEnhancer && inputEnhancerText}
 `;
+
 }
 
 
@@ -149,7 +159,7 @@ window.addEventListener("message", async function (event) {
                 break;
             case "GET_ACTIVE_PERSONA_PROMPT":
                 const personaInfo = await getActivePersonaData(eventData?.data?.personaId)
-                responseData = await formatPrompt(personaInfo, eventData?.data?.once);
+                responseData = await formatPrompt(personaInfo, eventData?.data?.once, eventData?.data?.fromInputEnhancer);
                 break;
             case "GET_SVG_ICON_URL":
                 const svgURL = await chrome.runtime.getURL('img/icon.svg');

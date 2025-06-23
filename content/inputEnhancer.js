@@ -319,6 +319,13 @@ class AIPersonaInputEnhancer {
             const promptInformation = document.createElement('p');
             promptInformation.className = 'ai-persona-information-subtle';
             promptInformation.textContent = `在此处选择人设方案仅用作本次插入，不影响全局选择。`;
+            if (this.activeAutoInject) {
+                const autoInjectInformation = document.createElement('p');
+                autoInjectInformation.classList.add('ai-persona-information-subtle', 'ai-persona-information-auto-inject');
+                autoInjectInformation.textContent = `当前网站支持自动注入，因此在新对话的第一条消息会自动注入人设方案，请勿在新对话的第一条消息手动插入人设方案。`;
+                outter.appendChild(autoInjectInformation);
+            }
+
             outter.appendChild(promptInformation);
 
             const selectRowItem = document.createElement('div');
@@ -359,7 +366,7 @@ class AIPersonaInputEnhancer {
                     const selectedPersonaId = select.value;
                     const selectedPromptResponse = await this.sendMessageWithResponse({ 
                         type: "GET_ACTIVE_PERSONA_PROMPT", 
-                        data: { once: true, personaId: selectedPersonaId } 
+                        data: { once: true, personaId: selectedPersonaId, fromInputEnhancer: true } 
                     });
                     const selectedPrompt = selectedPromptResponse?.data;
                     if (typeof selectedPrompt === 'string' && selectedPrompt.length > 0) {
@@ -577,6 +584,7 @@ class AIPersonaInputEnhancer {
         
         .ai-persona-information { margin: 0 0 4px 0; font-size: 13px; color: var(--text-primary); }
         .ai-persona-information-subtle { margin: 0 0 16px 0; font-size: 12px; color: var(--text-secondary); }
+        .ai-persona-information-auto-inject {margin: 0 0 8px 0; font-weight: bold;}
 
         .ai-persona-row-item { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
         .ai-persona-row-label { flex-shrink: 0; color: var(--text-primary); }
