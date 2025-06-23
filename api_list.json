@@ -1,6 +1,6 @@
 [
     {
-        "api": "/api/v0/chat/completion",
+        "api": ["/api/v0/chat/completion", "/api/v0/chat/edit_message"],
         "name": "deepseek",
         "hostname": "chat.deepseek.com",
         "enabled": true,

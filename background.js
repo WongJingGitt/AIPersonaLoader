@@ -382,10 +382,8 @@ ${originalPrompt}
                 if (typeof baseAPI === 'string') {
                     return currentAPI.includes(baseAPI);
                 }
-                console.log('baseAPI', baseAPI)
-                console.log('currentAPI', currentAPI)
                 if (Array.isArray(baseAPI)) {
-                    return baseAPI.some(item => item.includes(currentAPI))
+                    return baseAPI.some(item => currentAPI.includes(item))
                 }
                 return false
             }
