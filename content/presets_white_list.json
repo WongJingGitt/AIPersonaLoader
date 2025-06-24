@@ -1,0 +1,130 @@
+[
+    {
+        "id": "1",
+        "name": "DeepSeek",
+        "hostname": "chat.deepseek.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://cdn.deepseek.com/chat/icon.png"
+    },
+    {
+        "id": "2",
+        "name": "腾讯元宝",
+        "hostname": "yuanbao.tencent.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://cdn-bot.hunyuan.tencent.com/logo-v2.png"
+    },
+    {
+        "id": "3",
+        "name": "ChatGPT",
+        "hostname": "chatgpt.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://cdn.oaistatic.com/assets/favicon-miwirzcw.ico"
+    },
+    {
+        "id": "4",
+        "name": "Grok",
+        "hostname": "grok.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://grok.com/images/favicon-light.png"
+    },
+    {
+        "id": "5",
+        "name": "Claude",
+        "hostname": "claude.ai",
+        "enabled": true,
+        "description": "",
+        "logo": "https://claude.ai/images/claude_app_icon.png"
+    },
+    {
+        "id": "6",
+        "name": "豆包",
+        "hostname": "www.doubao.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao/logo_new.png"
+    },
+    {
+        "id": "7",
+        "name": "KIMI 月之暗面",
+        "hostname": "www.kimi.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://statics.moonshot.cn/kimi-web-seo/favicon.ico"
+    },
+    {
+        "id": "8",
+        "name": "文心一言",
+        "hostname": "yiyan.baidu.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://nlp-eb.cdn.bcebos.com/logo/favicon.ico"
+    },
+    {
+        "id": "9",
+        "name": "通义",
+        "hostname": "www.tongyi.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://img.alicdn.com/imgextra/i4/O1CN01EfJVFQ1uZPd7W4W6i_!!6000000006051-2-tps-112-112.png"
+    },
+    {
+        "id": "10",
+        "name": "智谱轻言",
+        "hostname": "chatglm.cn",
+        "enabled": true,
+        "description": "",
+        "logo": "https://chatglm.cn/img/icons/favicon-32x32.png"
+    },
+    {
+        "id": "11",
+        "name": "百度AI搜索",
+        "hostname": "chat.baidu.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://gips0.baidu.com/it/u=1125504705,2263448440&fm=3028&app=3028&f=PNG&fmt=auto&q=75&size=f72_72"
+    },
+    {
+        "id": "12",
+        "name": "Google AI Studio",
+        "hostname": "aistudio.google.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://www.gstatic.com/aistudio/ai_studio_favicon_32x32.png"
+    },
+    {
+        "id": "13",
+        "name": "夸克AI搜索",
+        "hostname": "ai.quark.cn",
+        "enabled": true,
+        "description": "",
+        "logo": "https://gw.alicdn.com/imgextra/i3/O1CN018r2tKf28YP7ev0fPF_!!6000000007944-2-tps-48-48.png"
+    },
+    {
+        "id": "14",
+        "name": "纳米AI搜索",
+        "hostname": "deepseek.n.cn",
+        "enabled": true,
+        "description": "",
+        "logo": "https://deepseek.n.cn/favicon.ico"
+    },
+    {
+        "id": "15",
+        "name": "商汤商量",
+        "hostname": "chat.sensetime.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://sensechat-ml.aoss.cn-sh-01.sensecoreapi-oss.cn/chat/prod/wb/favicon_ml.png"
+    },
+    {
+        "id": "16",
+        "name": "Gemini",
+        "hostname": "gemini.google.com",
+        "enabled": true,
+        "description": "",
+        "logo": "https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png"
+    }
+]
