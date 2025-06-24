@@ -142,6 +142,11 @@ async function getWhiteList () {
     return storedList;
 }
 
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (changes?.globalEnableState || changes?.persona_loader_api_list) {
+        window.postMessage({type: "REFRESH_GLOBAL_STATE", data: changes[Object.keys(changes)[0]]?.newValue})
+    }
+})
 
 window.addEventListener("message", async function (event) { 
     if (event.source !== window) return;

@@ -17,6 +17,18 @@ class AIPersonaInputEnhancer {
         this.injectGlobalStyles();
         window.addEventListener('beforeunload', () => this.cleanup());
         this.init();
+        
+        window.addEventListener('message', async event => {
+            if (event.data?.type === "REFRESH_GLOBAL_STATE") {
+                await this.refreshGlobalState();
+                this.trackedEnhancements.forEach(item => {
+                    const iconButton = item?.iconButton;
+                    if (!iconButton) return;
+                    iconButton.className = `ai-persona-icon ${!this.activeAutoInject ? 'ai-persona-icon-disabled' : ''}`.trim()
+                });
+            }
+        })
+
     }
 
     async init() {
@@ -35,19 +47,7 @@ class AIPersonaInputEnhancer {
         }
 
         // 从 background script 获取初始状态
-        try {
-            const [api_list_response, svg_icon_response] = await Promise.all([
-                this.sendMessageWithResponse({type: "GET_API_INFO"}),
-                this.sendMessageWithResponse({type: "GET_SVG_ICON_URL"})
-            ]);
-
-            const api_list = api_list_response?.data || [];
-            this.activeAutoInject = api_list.some(item => item.hostname === window.location.hostname);
-            this.svgIconUrl = svg_icon_response?.data;
-
-        } catch (error) {
-            console.warn("AIPersonaInputEnhancer: Could not get initial state from background. Using default.", error.message);
-        }
+        await this.refreshGlobalState();
 
         // 延迟执行，确保页面完全渲染
         return await new Promise((resolve, reject) => {
@@ -63,6 +63,26 @@ class AIPersonaInputEnhancer {
         })
     }
     
+    
+    async refreshGlobalState() {
+        try {
+            const [api_list_response, svg_icon_response] = await Promise.all([
+                this.sendMessageWithResponse({type: "GET_API_INFO"}),
+                this.sendMessageWithResponse({type: "GET_SVG_ICON_URL"})
+            ]);
+
+            const api_list = api_list_response?.data || [];
+            this.activeAutoInject = api_list.some(item => item.hostname === window.location.hostname && item.enabled);
+            const globalInjectState = await this.sendMessageWithResponse({type: "GET_GLOBAL_ENABLE_STATE"});
+            if (!globalInjectState.data) this.activeAutoInject = false;
+
+            this.svgIconUrl = svg_icon_response?.data;
+
+        } catch (error) {
+            console.warn("AIPersonaInputEnhancer: Could not get initial state from background. Using default.", error.message);
+        }
+    }
+
     async shouldInjectOnThisPage() {
         const whiteListResponse = await this.sendMessageWithResponse({type: "GET_WHITE_LIST"});
         const whiteList = whiteListResponse?.data ?? [];
@@ -207,7 +227,7 @@ class AIPersonaInputEnhancer {
         }
     }
     
-    createEnhancementUI(input) {
+    async createEnhancementUI(input) {
         const parent = input.parentNode;
         if (!parent || parent.classList.contains('ai-persona-icon-container')) return null;
 
@@ -220,7 +240,7 @@ class AIPersonaInputEnhancer {
             title: 'AIPersonaLoader',
             children: [icon]
         });
-
+        
         const iconContainer = this.createDOMElement('div', {
             className: 'ai-persona-icon-container',
             children: [iconButton]
@@ -262,8 +282,10 @@ class AIPersonaInputEnhancer {
     }
 
     async popoverBody(input) {
+        await this.refreshGlobalState();
+
         const container = this.createDOMElement('div', { className: 'ai-persona-popover-body' });
-    
+        
         try {
             const manifestResponse = await this.sendMessageWithResponse({ type: "GET_PERSONA_MANIFEST" });
             const manifestData = manifestResponse?.data;
