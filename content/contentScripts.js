@@ -39,7 +39,7 @@ const getApiListData = async () => {
 
     const storedList = storageApiList?.persona_loader_api_list;
 
-    if (!storedList) {
+    if (!storedList || storedList.length === 0) {
         await chrome.storage.local.set({ persona_loader_api_list: fileApiList });
         return fileApiList;
     }
@@ -126,6 +126,22 @@ ${fromInputEnhancer && inputEnhancerText}
 
 }
 
+async function getWhiteList () { 
+    const whiteList = await chrome.storage.local.get(["persona_white_list"]);
+    const whiteListURL = await chrome.runtime.getURL('content/presets_white_list.json');
+    
+    let fileWhiteList = await fetch(whiteListURL).then( response => response.json());
+
+    const storedList = whiteList.persona_white_list || [];
+
+    if (!storedList || storedList.length === 0) {
+        await chrome.storage.local.set({ "persona_white_list": fileWhiteList });
+        return fileWhiteList; 
+    }
+    
+    return storedList;
+}
+
 
 window.addEventListener("message", async function (event) { 
     if (event.source !== window) return;
@@ -135,7 +151,7 @@ window.addEventListener("message", async function (event) {
     const EVENT_LIST = [ 
         "GET_USER_INFO", "GET_GLOBAL_ENABLE_STATE", 
         "GET_API_INFO", "GET_PERSONA_MANIFEST", "GET_ACTIVE_PERSONA_PROMPT",
-        "GET_SVG_ICON_URL",
+        "GET_SVG_ICON_URL", "GET_WHITE_LIST"
     ];
     
     if (!eventType || !EVENT_LIST.includes(eventType)) return;
@@ -164,6 +180,9 @@ window.addEventListener("message", async function (event) {
             case "GET_SVG_ICON_URL":
                 const svgURL = await chrome.runtime.getURL('img/icon.svg');
                 responseData = svgURL;
+                break;
+            case "GET_WHITE_LIST":
+                responseData = await getWhiteList();
                 break;
         }
         window.postMessage({ type: responseType, data: responseData });

@@ -116,6 +116,7 @@
             color: white;
         }
 
+        .panel-bottom { display: flex; flex-direction: column; gap: 10px; }
         .action-buttons { display: flex; flex-direction: column; gap: 10px; }
 
         .button { width: 100%; height: 40px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease-out; box-sizing: border-box; border: 1px solid transparent; }
@@ -167,6 +168,11 @@
         }
         .button-group-item { flex: 1}
         .button-group-item-button { width: 100%; }
+        .panel-bottom-text { text-align: center; margin: 0; font-size: 12px;}
+        .panel-bottom-text-normal { color: var(--text-color); }
+        .panel-bottom-text-warning { color: var(--danger-color); }
+        .panel-bottom-text-success { color: var(--success-color); }
+        .panel-bottom-text-info { color: var(--text-color-muted);}
     </style>
 </head>
 <body>
@@ -192,10 +198,11 @@
             </div>
 
             <div class="panel-bottom">
-                 <div class="action-buttons">
+                <p class="panel-bottom-text" id="inputEnhancerInfo"></p>
+                <div class="action-buttons">
                     <div class="button-group">
                         <div class="button-group-item">
-                            <button id="copyRefreshPrompt" class="button secondary">复制刷新文案</button>
+                            <button id="inputEnhancerButton" class="button">启用手动注入</button>
                         </div>
                         <div class="button-group-item">
                             <button id="copyPromptButton" class="button primary">复制人设文案</button>

@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openOptionsButton = document.getElementById('openOptionsButton');
     const copyPromptButton = document.getElementById('copyPromptButton');
     const personaSelect = document.getElementById('personaSelect'); // 新增
-    const copyRefreshButton = document.getElementById('copyRefreshPrompt');
+    const inputEnhancerButton = document.getElementById('inputEnhancerButton');
+    const inputEnhancerText = document.getElementById('inputEnhancerInfo');
 
     let API_LIST = [];
 
@@ -66,6 +67,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         return storageApiList?.persona_loader_api_list;
+    }
+
+    async function getWhiteList () { 
+        const whiteList = await chrome.storage.local.get(["persona_white_list"]);
+        const whiteListURL = await chrome.runtime.getURL('content/presets_white_list.json');
+        let fileWhiteList = await fetch(whiteListURL).then(response => response.json());
+    
+        const storedList = whiteList.persona_white_list || [];
+    
+        if (!storedList || storedList.length === 0) {
+            await chrome.storage.local.set({ "persona_white_list": fileWhiteList });
+            return fileWhiteList; 
+        }
+        return storedList;
     }
 
     async function formatPrompt(loadedUserConfig, once) {
@@ -229,21 +244,65 @@ ${memory.join('\n')}
         });
     }
 
-    if (copyRefreshButton) {
-        copyRefreshButton.addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText("{{刷新人设}}");
-                copyRefreshButton.textContent = '已复制!';
-                copyRefreshButton.disabled = true;
-            } catch (error) {
-                console.error("PersonaLoader: Error copying prompt to clipboard", error);
-                copyRefreshButton.textContent = '复制失败!';
-            } finally {
-                setTimeout(() => {
-                    copyRefreshButton.textContent = "复制刷新文案";
-                    copyRefreshButton.disabled = false;
-                }, 2000);
+    if (inputEnhancerButton) {
+        const whiteList = await getWhiteList();
+        const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        const activeURL = new URL(tab.url);
+        const isInWhiteList = whiteList.some(item => item.hostname === activeURL.hostname);
+        const isInjected = whiteList.some(item => item.hostname === activeURL.hostname && item.enabled)
+        const changeButtonState = (a, b) => {
+            if (!a) {
+                inputEnhancerButton.classList.add('primary');
+                inputEnhancerButton.textContent = '启用手动注入';
+                inputEnhancerButton.disabled = false;
+                inputEnhancerButton.style.fontSize = '14px';
+                inputEnhancerText.classList.remove('panel-bottom-text-success');
+                inputEnhancerText.classList.add('panel-bottom-text-info');
+                inputEnhancerText.textContent = '当前网站未在白名单内，请点击下方按钮手动开启注入，将当前网站添加至白名单。';
+            } 
+            else if (a && !b) {
+                inputEnhancerButton.classList.add('primary');
+                inputEnhancerButton.textContent = '启用手动注入';
+                inputEnhancerButton.disabled = false;
+                inputEnhancerButton.style.fontSize = '14px';
+                inputEnhancerText.classList.remove('panel-bottom-text-success');
+                inputEnhancerText.classList.add('panel-bottom-text-info');
+                inputEnhancerText.textContent = '当前网站在白名单内，但是已关闭注入，请点击下方按钮手动开启注入。';
+            } else {
+                inputEnhancerButton.classList.add('secondary');
+                inputEnhancerButton.textContent = '当前网站已启用';
+                inputEnhancerButton.disabled = true;
+                inputEnhancerButton.style.fontSize = '12px';
+                inputEnhancerText.textContent = "当前网站在白名单内，并且已启用输入框注入。";
+                inputEnhancerText.classList.remove('panel-bottom-text-info');
+                inputEnhancerText.classList.add('panel-bottom-text-success');
             }
+        }
+
+        changeButtonState(isInWhiteList, isInjected);
+
+        inputEnhancerButton.addEventListener('click', async () => {
+            let newWhiteList = [];
+            if (!isInWhiteList) {
+                const id = (new Date()).getTime().toString();
+                const domainParts  = activeURL.hostname.split('.');
+                const domain = domainParts.length > 2 ? domainParts[domainParts.length - 3] : domainParts[0];
+                newWhiteList = [...whiteList, {id: id, name: domain, enabled: true, description: "", hostname: activeURL.hostname}];
+                await chrome.storage.local.set({persona_white_list: newWhiteList});
+                changeButtonState(newWhiteList, true);
+                toast("成功添加至白名单");
+            }
+            else if (isInWhiteList && !isInjected) {
+                newWhiteList = whiteList.map(item => item.hostname === activeURL.hostname ? {...item, enabled: true} : item);
+                await chrome.storage.local.set({persona_white_list: newWhiteList});
+                changeButtonState(newWhiteList, true);
+                toast("开启成功")
+            }
+            await chrome.scripting.executeScript({
+                target: {tabId: tab.id},
+                func: () => window.aiPersonaEnhancer.init(),
+                world: 'MAIN'
+            })
         });
     }
 

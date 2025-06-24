@@ -1,66 +1,72 @@
-// content.js - 浏览器插件内容脚本
-
 class AIPersonaInputEnhancer {
     constructor() {
+        // --- 状态管理 ---
         this.processedInputs = new WeakSet();
         this.enhancementCache = new WeakMap();
         this.trackedEnhancements = new Set();
         
         this.activePopover = null;
-        this.throttledProcess = this.throttle(this.processInputs.bind(this), 100);
-        this.activeAutoInject = false; // 默认值
+        this.activeAutoInject = false;
         this.isCleanedUp = false;
         this.svgIconUrl = null;
 
-        // 立即注入样式，这不依赖任何异步操作
+        // --- 工具函数 ---
+        this.throttledProcess = this.throttle(this.processInputs.bind(this), 100);
+        
+        // --- 初始化 ---
         this.injectGlobalStyles();
-        // 监听卸载事件
         window.addEventListener('beforeunload', () => this.cleanup());
-
-        // 启动初始化流程
         this.init();
     }
-    
 
     async init() {
         if (this.isCleanedUp) return;
 
+        // 等待DOM加载完成
         if (document.readyState === 'loading') {
             await new Promise(resolve => {
                 document.addEventListener('DOMContentLoaded', resolve, { once: true });
             });
         }
-        
-        if (!this.shouldInjectOnThisPage()) {
+        const shouldInject = await this.shouldInjectOnThisPage();
+        if (!shouldInject) {
             console.log("AIPersonaInputEnhancer: Injection disabled for this page.");
             return;
         }
 
+        // 从 background script 获取初始状态
         try {
-            const api_list_response = await this.sendMessageWithResponse({type: "GET_API_INFO"});
+            const [api_list_response, svg_icon_response] = await Promise.all([
+                this.sendMessageWithResponse({type: "GET_API_INFO"}),
+                this.sendMessageWithResponse({type: "GET_SVG_ICON_URL"})
+            ]);
+
             const api_list = api_list_response?.data || [];
-            this.activeAutoInject = api_list.find(item => item.hostname === window.location.hostname);
-        
-            const svg_icon_response = await this.sendMessageWithResponse({type: "GET_SVG_ICON_URL"});
+            this.activeAutoInject = api_list.some(item => item.hostname === window.location.hostname);
             this.svgIconUrl = svg_icon_response?.data;
+
         } catch (error) {
             console.warn("AIPersonaInputEnhancer: Could not get initial state from background. Using default.", error.message);
         }
-        
 
-        setTimeout(() => {
-            if (this.isCleanedUp) return; 
-            this.setupMutationObserver();
-            this.processExistingInputs();
-        }, 0);
+        // 延迟执行，确保页面完全渲染
+        return await new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (this.isCleanedUp) {
+                    reject();
+                    return;
+                }; 
+                this.setupMutationObserver();
+                this.processExistingInputs();
+                resolve(true);
+            }, 0);
+        })
     }
     
-    shouldInjectOnThisPage() {
-        // TODO: 在这里动态判断是否需要注入。
-        //     可以考虑结合hostname来判断，manifest.json中改为所有链接都注入。
-        //     在options页面增加一个页面来增加减少需要注入的页面。
-        //     类似api_list，也需要一个json文件来作为初始化。
-        return true;
+    async shouldInjectOnThisPage() {
+        const whiteListResponse = await this.sendMessageWithResponse({type: "GET_WHITE_LIST"});
+        const whiteList = whiteListResponse?.data ?? [];
+        return whiteList.some(item => item.hostname === window.location.hostname && item.enabled)
     }
     
     setInputValue(inputElement, value) {
@@ -72,29 +78,21 @@ class AIPersonaInputEnhancer {
                 : window.HTMLInputElement.prototype;
             const nativeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value").set;
             nativeValueSetter.call(inputElement, value);
-            ['input', 'change'].forEach(eventType => {
-                const event = new Event(eventType, { bubbles: true });
-                inputElement.dispatchEvent(event);
-            });
         } else if (inputElement.isContentEditable) {
             inputElement.focus();
-            if (navigator.clipboard && window.ClipboardEvent) {
+            if (document.execCommand) {
                 document.execCommand('selectAll');
                 document.execCommand('insertText', false, value);
             } else {
                 inputElement.textContent = value;
-                const range = document.createRange();
-                const selection = window.getSelection();
-                range.selectNodeContents(inputElement);
-                range.collapse(false);
-                selection.removeAllRanges();
-                selection.addRange(range);
             }
-            ['input', 'change'].forEach(eventType => {
-                const event = new Event(eventType, { bubbles: true });
-                inputElement.dispatchEvent(event);
-            });
         }
+
+        ['input', 'change', 'keyup', 'keydown'].forEach(eventType => {
+            const event = new Event(eventType, { bubbles: true, cancelable: true });
+            inputElement.dispatchEvent(event);
+        });
+
         if (inputElement.scrollHeight > inputElement.clientHeight) {
             inputElement.scrollTop = inputElement.scrollHeight;
         }
@@ -106,22 +104,21 @@ class AIPersonaInputEnhancer {
         this.observer = new MutationObserver((mutations) => {
             if (this.isCleanedUp) return;
             const inputsToProcess = new Set();
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         this.collectInputsFromNode(node, inputsToProcess);
                     }
-                });
-            });
+                }
+            }
             if (inputsToProcess.size > 0) {
                 this.throttledProcess(inputsToProcess);
             }
         });
+
         this.observer.observe(document.documentElement, {
             childList: true,
-            subtree: true,
-            attributes: false,
-            characterData: false
+            subtree: true
         });
     }
 
@@ -134,26 +131,23 @@ class AIPersonaInputEnhancer {
     }
 
     collectInputsFromNode(node, inputsSet) {
-        if (this.isTargetInput(node)) {
+        if (this.isTargetInput(node) && !this.processedInputs.has(node)) {
             inputsSet.add(node);
         }
-        const selectors = ['textarea', 'div[contenteditable="true"]', '[contenteditable="true"]'];
-        selectors.forEach(selector => {
-            try {
-                const elements = node.querySelectorAll(selector);
-                elements.forEach(element => {
-                    if (!this.processedInputs.has(element)) {
-                        inputsSet.add(element);
-                    }
-                });
-            } catch (e) { /* Ingnore invalid selector errors */ }
-        });
+        const selectors = 'textarea, div[contenteditable="true"], [contenteditable="true"]';
+        try {
+            const elements = node.querySelectorAll(selectors);
+            elements.forEach(element => {
+                if (this.isTargetInput(element) && !this.processedInputs.has(element)) {
+                    inputsSet.add(element);
+                }
+            });
+        } catch (e) { /* 忽略错误 */ }
     }
 
     isTargetInput(element) {
-        if (!element.tagName) return false;
-        const tag = element.tagName.toLowerCase();
-        return tag === 'textarea' || (element.contentEditable === 'true' || element.getAttribute('contenteditable') === 'true');
+        if (!element || typeof element.tagName !== 'string') return false;
+        return element.tagName.toLowerCase() === 'textarea' || element.isContentEditable;
     }
 
     processInputs(inputsSet) {
@@ -161,7 +155,7 @@ class AIPersonaInputEnhancer {
         let index = 0;
         const processChunk = () => {
             const startTime = performance.now();
-            while (index < inputs.length && performance.now() - startTime < 5) {
+            while (index < inputs.length && performance.now() - startTime < 10) {
                 const input = inputs[index++];
                 if (!this.processedInputs.has(input) && this.isValidInput(input)) {
                     this.enhanceInput(input);
@@ -172,205 +166,154 @@ class AIPersonaInputEnhancer {
                 requestAnimationFrame(processChunk);
             }
         };
-        processChunk();
+        requestAnimationFrame(processChunk);
     }
 
     isValidInput(input) {
+        if (!input || !input.isConnected) return false;
         const rect = input.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && !input.disabled && !input.readOnly;
+        const style = window.getComputedStyle(input);
+        return rect.width > 50 && rect.height > 10 && !input.disabled && !input.readOnly && style.visibility !== 'hidden' && style.display !== 'none';
     }
     
     enhanceInput(input) {
         if (this.enhancementCache.has(input)) return;
-
         const enhancement = this.createEnhancementUI(input);
+        if (!enhancement) return;
         this.enhancementCache.set(input, enhancement);
 
-        this.observeInputPosition(input, enhancement);
-
         const hostObserver = new MutationObserver(() => {
-            if (!document.body.contains(input)) {
-                this.cleanupEnhancement(enhancement);
+            if (!input.isConnected) {
+                this.cleanupEnhancement(enhancement, input);
                 hostObserver.disconnect();
             }
         });
-
         hostObserver.observe(document.documentElement, { childList: true, subtree: true });
-        enhancement._hostObserver = hostObserver;
+        enhancement.wrapper._hostObserver = hostObserver;
     }
     
-    cleanupEnhancement(enhancement) {
-        if (!enhancement) return;
-
-        if (enhancement._intersectionObserver) enhancement._intersectionObserver.disconnect();
-        if (enhancement._resizeObserver) enhancement._resizeObserver.disconnect();
-        if (enhancement._hostObserver) enhancement._hostObserver.disconnect();
-        if (enhancement._scrollListener) window.removeEventListener('scroll', enhancement._scrollListener);
-        if (enhancement._resizeListener) window.removeEventListener('resize', enhancement._resizeListener);
-
-        enhancement.remove();
+    cleanupEnhancement(enhancement, input) {
+        if (!enhancement || !enhancement.wrapper) return;
+        const parent = enhancement.wrapper.parentNode;
+        if (parent && enhancement.input) {
+            parent.insertBefore(enhancement.input, enhancement.wrapper);
+        }
+        enhancement.wrapper.remove();
+        if (enhancement.wrapper._hostObserver) enhancement.wrapper._hostObserver.disconnect();
         this.trackedEnhancements.delete(enhancement);
+        if (input) {
+            this.enhancementCache.delete(input);
+            this.processedInputs.delete(input);
+        }
     }
     
     createEnhancementUI(input) {
-        const container = document.createElement('div');
-        container.className = 'ai-persona-enhancement';
-        
-        const iconContainer = document.createElement('div');
-        const icon = document.createElement('img');
-        icon.src = this.svgIconUrl;
-        icon.alt = 'AIPersonaLoader';
-        icon.width = 20;
-        icon.height = 20;
-        iconContainer.appendChild(icon);
-        const iconSvg = iconContainer.firstChild;
-        
-        const iconButton = document.createElement('div');
-        iconButton.classList.add('ai-persona-icon');
-        if (!this.activeAutoInject) {
-            iconButton.classList.add('ai-persona-icon-status-disabled');
-        }
-        iconButton.appendChild(iconSvg);
-        iconButton.title = 'AIPersonaLoader';
+        const parent = input.parentNode;
+        if (!parent || parent.classList.contains('ai-persona-icon-container')) return null;
+
+        const icon = this.createDOMElement('img', {
+            attributes: { src: this.svgIconUrl || '', alt: 'AI', width: 18, height: 18 }
+        });
+
+        const iconButton = this.createDOMElement('div', {
+            className: `ai-persona-icon ${!this.activeAutoInject ? 'ai-persona-icon-disabled' : ''}`.trim(),
+            title: 'AIPersonaLoader',
+            children: [icon]
+        });
+
+        const iconContainer = this.createDOMElement('div', {
+            className: 'ai-persona-icon-container',
+            children: [iconButton]
+        });
+        parent.appendChild(iconContainer);
         
         iconButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.showPopover(input, iconButton);
         });
-        
-        container.appendChild(iconButton);
-        this.positionEnhancement(container, input);
-        document.body.appendChild(container);
-        this.trackedEnhancements.add(container);
-        
-        return container;
+
+        const enhancement = { wrapper: iconContainer, input, iconButton };
+        this.trackedEnhancements.add(enhancement);
+        return enhancement;
     }
 
-    observeInputPosition(input, enhancement) {
-        const updateState = { isUpdating: false, isVisible: false };
-        const updateLoop = () => {
-            if (!updateState.isUpdating || !updateState.isVisible) {
-                updateState.isUpdating = false;
-                return;
+    /**
+     * 安全地创建DOM元素，替代innerHTML
+     * @param {string} tag - HTML标签名
+     * @param {object} options - 选项: className, id, textContent, title, attributes, children
+     * @returns {HTMLElement}
+     */
+    createDOMElement(tag, options = {}) {
+        const el = document.createElement(tag);
+        if (options.className) el.className = options.className;
+        if (options.id) el.id = options.id;
+        if (options.textContent) el.textContent = options.textContent;
+        if (options.title) el.title = options.title;
+        if (options.attributes) {
+            for (const [key, value] of Object.entries(options.attributes)) {
+                el.setAttribute(key, String(value));
             }
-            this.positionEnhancement(enhancement, input);
-            requestAnimationFrame(updateLoop);
-        };
-        const requestUpdate = () => {
-            if (!updateState.isUpdating) {
-                updateState.isUpdating = true;
-                requestAnimationFrame(updateLoop);
-            }
-        };
-        const observer = new IntersectionObserver((entries) => {
-            const entry = entries[0];
-            updateState.isVisible = entry.isIntersecting;
-            if (updateState.isVisible) {
-                enhancement.style.visibility = 'visible';
-                requestUpdate();
-            } else {
-                enhancement.style.visibility = 'hidden';
-                updateState.isUpdating = false;
-            }
-        }, { threshold: 0 });
-        observer.observe(input);
-        enhancement._intersectionObserver = observer;
-        if (window.ResizeObserver) {
-            const resizeObserver = new ResizeObserver(() => {
-                if (updateState.isVisible) requestUpdate();
-            });
-            resizeObserver.observe(input);
-            enhancement._resizeObserver = resizeObserver;
         }
-        const onScrollOrResize = this.throttle(() => {
-            if (updateState.isVisible) requestUpdate();
-        }, 16);
-        window.addEventListener('scroll', onScrollOrResize, { passive: true });
-        window.addEventListener('resize', onScrollOrResize, { passive: true });
-        enhancement._scrollListener = onScrollOrResize;
-        enhancement._resizeListener = onScrollOrResize;
+        if (options.children) {
+            options.children.forEach(child => child && el.appendChild(child));
+        }
+        return el;
     }
 
-    positionEnhancement(enhancement, input) {
-        const rect = input.getBoundingClientRect();
-        const scrollX = window.pageXOffset;
-        const scrollY = window.pageYOffset;
-        enhancement.style.position = 'absolute';
-        enhancement.style.top = `${rect.top + scrollY + 5}px`;
-        enhancement.style.left = `${rect.right + scrollX - 28}px`;
-        enhancement.style.zIndex = '999999';
-    }
-    
     async popoverBody(input) {
-        const outter = document.createElement('div');
-        outter.className = 'ai-persona-popover-body-wrapper';
-
+        const container = this.createDOMElement('div', { className: 'ai-persona-popover-body' });
+    
         try {
-            let manifestData = await this.sendMessageWithResponse({ type: "GET_PERSONA_MANIFEST" });
-            manifestData = manifestData?.data;
-            let selectedPersona = manifestData.personas.find(item => item.id === manifestData.activePersonaId) || manifestData.personas.filter(item => item.isActive)?.[0];
-
-            const selectedInformation = document.createElement('p');
-            selectedInformation.className = 'ai-persona-information';
-            selectedInformation.textContent = this.activeAutoInject ? `当前激活的人设：${selectedPersona?.name || '无'}` : "当前网站不支持自动注入，请手动选择。";
-            outter.appendChild(selectedInformation);
-
-            const promptInformation = document.createElement('p');
-            promptInformation.className = 'ai-persona-information-subtle';
-            promptInformation.textContent = `在此处选择人设方案仅用作本次插入，不影响全局选择。`;
+            const manifestResponse = await this.sendMessageWithResponse({ type: "GET_PERSONA_MANIFEST" });
+            const manifestData = manifestResponse?.data;
+            if (!manifestData || !manifestData.personas) throw new Error("Invalid manifest data");
+    
+            const activePersona = manifestData.personas.find(p => p.id === manifestData.activePersonaId) || manifestData.personas.find(p => p.isActive);
+    
+            // 状态卡片
+            const statusIcon = this.createDOMElement('div', { className: `ai-persona-status-icon ${this.activeAutoInject ? 'active' : 'inactive'}` });
+            const statusTitle = this.createDOMElement('div', { className: 'status-title', textContent: this.activeAutoInject ? '自动注入已启用' : '手动模式' });
+            const statusSubtitle = this.createDOMElement('div', { className: 'status-subtitle', textContent: activePersona?.name || '未选择人设' });
+            const statusText = this.createDOMElement('div', { className: 'ai-persona-status-text', children: [statusTitle, statusSubtitle] });
+            const statusCard = this.createDOMElement('div', { className: 'ai-persona-status-card', children: [statusIcon, statusText] });
+            container.appendChild(statusCard);
+    
+            // 注入通知
             if (this.activeAutoInject) {
-                const autoInjectInformation = document.createElement('p');
-                autoInjectInformation.classList.add('ai-persona-information-subtle', 'ai-persona-information-auto-inject');
-                autoInjectInformation.textContent = `当前网站支持自动注入，因此在新对话的第一条消息会自动注入人设方案，请勿在新对话的第一条消息手动插入人设方案。`;
-                outter.appendChild(autoInjectInformation);
+                const notice = this.createDOMElement('div', { className: 'ai-persona-notice', textContent: '⚠️ 当前站点支持自动注入，新对话首条消息会自动添加人设。' });
+                container.appendChild(notice);
             }
-
-            outter.appendChild(promptInformation);
-
-            const selectRowItem = document.createElement('div');
-            selectRowItem.className = 'ai-persona-row-item';
-            const selectRowLabel = document.createElement('label');
-            selectRowLabel.className = 'ai-persona-row-label';
-            selectRowLabel.textContent = '选择人设';
-            selectRowLabel.htmlFor = 'ai-persona-select-popover';
-            
-            const selectElement = document.createElement('select');
-            selectElement.className = 'ai-persona-select';
-            selectElement.id = 'ai-persona-select-popover';
-            for (const persona of manifestData.personas) {
-                const option = document.createElement('option');
-                option.value = persona.id;
-                option.text = persona.name;
-                selectElement.appendChild(option);
-            };
-            if (selectedPersona) {
-                selectElement.value = selectedPersona.id;
-            }
-            
-            selectRowItem.appendChild(selectRowLabel);
-            selectRowItem.appendChild(selectElement);
-            outter.appendChild(selectRowItem);
-
-            const buttonRowItem = document.createElement('div');
-            buttonRowItem.className = 'ai-persona-row-item';
-            const buttonRowButton = document.createElement('button');
-            buttonRowButton.classList.add('ai-persona-button', 'ai-persona-button-primary', 'ai-persona-button-block');
-            buttonRowButton.textContent = '填写至输入框';
-            buttonRowItem.appendChild(buttonRowButton);
-            
-            buttonRowButton.addEventListener('click', async () => {
+    
+            // 人设选择器
+            const label = this.createDOMElement('label', { className: 'ai-persona-label', textContent: '选择人设方案', attributes: { 'for': 'ai-persona-select-popover' } });
+            const select = this.createDOMElement('select', { className: 'ai-persona-select', id: 'ai-persona-select-popover' });
+            manifestData.personas.forEach(p => {
+                const option = this.createDOMElement('option', { textContent: p.name, attributes: { 'value': p.id } });
+                if (activePersona && p.id === activePersona.id) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            const selectWrapper = this.createDOMElement('div', { className: 'ai-persona-select-wrapper', children: [select] });
+            const selectorGroup = this.createDOMElement('div', { className: 'ai-persona-form-group', children: [label, selectWrapper] });
+            container.appendChild(selectorGroup);
+    
+            // 操作按钮
+            const primaryButton = this.createDOMElement('button', { className: 'ai-persona-button ai-persona-button-primary', textContent: '📝 插入到输入框' });
+            const secondaryButton = this.createDOMElement('button', { className: 'ai-persona-button ai-persona-button-secondary', textContent: '🚫 本次停用' });
+            const actionGroup = this.createDOMElement('div', { className: 'ai-persona-action-group', children: [primaryButton, secondaryButton] });
+            container.appendChild(actionGroup);
+    
+            // 事件绑定
+            primaryButton.addEventListener('click', async () => {
                 try {
-                    const select = document.getElementById('ai-persona-select-popover');
-                    if (!select) return;
-                    const selectedPersonaId = select.value;
-                    const selectedPromptResponse = await this.sendMessageWithResponse({ 
+                    const response = await this.sendMessageWithResponse({ 
                         type: "GET_ACTIVE_PERSONA_PROMPT", 
-                        data: { once: true, personaId: selectedPersonaId, fromInputEnhancer: true } 
+                        data: { once: true, personaId: select.value, fromInputEnhancer: true } 
                     });
-                    const selectedPrompt = selectedPromptResponse?.data;
-                    if (typeof selectedPrompt === 'string' && selectedPrompt.length > 0) {
-                        this.setInputValue(input, selectedPrompt);
+                    if (typeof response?.data === 'string' && response.data.length > 0) {
+                        this.setInputValue(input, response.data);
                         this.closePopover();
                     } else {
                         console.error("获取人设 Prompt 失败或为空。");
@@ -379,118 +322,132 @@ class AIPersonaInputEnhancer {
                     console.error("在注入人设时发生错误:", error);
                 }
             });
-            outter.appendChild(buttonRowItem);
+            secondaryButton.addEventListener('click', () => this.cleanup());
+    
         } catch (error) {
             console.warn("AIPersonaInputEnhancer: Could not get persona manifest from background.", error.message);
-            const errorInfo = document.createElement('p');
-            errorInfo.textContent = `加载人设列表失败。`;
-            errorInfo.style.color = '#d73a49';
-            outter.appendChild(errorInfo);
+            const errorIcon = this.createDOMElement('div', { className: 'error-icon', textContent: '⚠️' });
+            const errorText = this.createDOMElement('div', { className: 'error-text', textContent: '加载人设列表失败' });
+            const errorDetails = this.createDOMElement('div', { className: 'error-details', textContent: error.message });
+            const errorCard = this.createDOMElement('div', { className: 'ai-persona-error-card', children: [errorIcon, errorText, errorDetails] });
+            container.appendChild(errorCard);
         }
-
-        const cleanupRowItem = document.createElement('div');
-        cleanupRowItem.classList.add('ai-persona-row-item', 'ai-persona-row-item-cleanup');
-        const cleanupButton = document.createElement('button');
-        cleanupButton.classList.add('ai-persona-button', 'ai-persona-button-secondary', 'ai-persona-button-block');
-        cleanupButton.textContent = '本次停用';
-        cleanupRowItem.appendChild(cleanupButton);
-        
-        cleanupButton.addEventListener('click', () => {
-            this.cleanup();
-        });
-        outter.appendChild(cleanupRowItem);
-
-        return outter;
+        return container;
     }
 
     async showPopover(input, iconButton) {
-        this.closePopover();
-        const popover = document.createElement('div');
-        popover.className = 'ai-persona-popover';
-        const content = document.createElement('div');
-        content.className = 'ai-persona-popover-content';
-        const title = document.createElement('div');
-        title.className = 'ai-persona-popover-title';
-        title.textContent = 'AIPersonaLoader';
-        const body = document.createElement('div');
-        body.className = 'ai-persona-popover-body';
-
-        const loader = document.createElement('div');
-        loader.className = 'ai-persona-loader';
-        body.appendChild(loader);
-        content.appendChild(body);
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'ai-persona-popover-close';
-        closeBtn.textContent = '×';
+        if (this.activePopover) this.closePopover();
+    
+        // 构建 Popover 骨架 (安全方式)
+        const titleIcon = this.createDOMElement('span', { className: 'title-icon', textContent: '🤖' });
+        const titleText = this.createDOMElement('span', { className: 'title-text', textContent: 'AIPersonaLoader' });
+        const popoverTitle = this.createDOMElement('div', { className: 'popover-title', children: [titleIcon, titleText] });
+        const closeBtn = this.createDOMElement('button', { className: 'popover-close', textContent: '×', title: '关闭' });
+        const header = this.createDOMElement('div', { className: 'ai-persona-popover-header', children: [popoverTitle, closeBtn] });
+    
+        const spinner = this.createDOMElement('div', { className: 'spinner' });
+        const loaderText = this.createDOMElement('span', { textContent: '加载中...' });
+        const loader = this.createDOMElement('div', { className: 'ai-persona-loader', children: [spinner, loaderText] });
+        const contentContainer = this.createDOMElement('div', { className: 'ai-persona-popover-content', children: [loader] });
+    
+        this.activePopover = this.createDOMElement('div', {
+            className: 'ai-persona-popover',
+            children: [header, contentContainer]
+        });
+    
+        document.body.appendChild(this.activePopover);
+        this.positionPopover(this.activePopover, iconButton);
+    
         closeBtn.addEventListener('click', () => this.closePopover());
-        content.insertBefore(closeBtn, content.firstChild);
-        content.insertBefore(title, body);
-        popover.appendChild(content);
-        this.activePopover = popover;
-
-        this.positionPopover(popover, iconButton);
-        
-        const popoverContent = await this.popoverBody(input);
-         
-        body.replaceChildren?.() ||(function () { while (body.firstChild) body.removeChild(body.firstChild);})();
-        
-        body.appendChild(popoverContent);
-        
+    
+        // 异步加载并填充内容
+        try {
+            const bodyContent = await this.popoverBody(input);
+            if (contentContainer.replaceChildren) {
+                contentContainer.replaceChildren();
+            }else {
+                while (contentContainer.firstChild) {
+                    contentContainer.removeChild(contentContainer.firstChild);
+                }
+            }
+            
+            contentContainer.appendChild(bodyContent);
+        } catch (error) {
+            const errorIcon = this.createDOMElement('div', { className: 'error-icon', textContent: '⚠️' });
+            const errorText = this.createDOMElement('div', { className: 'error-text', textContent: '加载失败' });
+            const errorDetails = this.createDOMElement('div', { className: 'error-details', textContent: error.message });
+            const errorCard = this.createDOMElement('div', { className: 'ai-persona-error-card', children: [errorIcon, errorText, errorDetails] });
+            if (contentContainer.replaceChildren) {
+                contentContainer.replaceChildren();
+            }else {
+                while (contentContainer.firstChild) {
+                    contentContainer.removeChild(contentContainer.firstChild);
+                }
+            }
+            contentContainer.appendChild(errorCard);
+        }
+    
+        // 内容加载后可能尺寸变化，重新定位
+        this.positionPopover(this.activePopover, iconButton);
+    
+        // 绑定事件监听
         this.popoverResizeHandler = this.throttle(() => {
             if (this.activePopover) this.positionPopover(this.activePopover, iconButton);
-        }, 100);
-        window.addEventListener('scroll', this.popoverResizeHandler, { passive: true });
+        }, 50);
+        window.addEventListener('scroll', this.popoverResizeHandler, { passive: true, capture: true });
         window.addEventListener('resize', this.popoverResizeHandler, { passive: true });
+    
         this.outsideClickHandler = (e) => {
             if (this.activePopover && !this.activePopover.contains(e.target) && !iconButton.contains(e.target)) {
                 this.closePopover();
             }
         };
-        setTimeout(() => {
-            document.addEventListener('mousedown', this.outsideClickHandler);
-        }, 0);
+        setTimeout(() => document.addEventListener('mousedown', this.outsideClickHandler), 0);
     }
-
-
+    
     positionPopover(popover, iconButton) {
+        if (!popover || !iconButton.isConnected) {
+            this.closePopover();
+            return;
+        }
+
         const iconRect = iconButton.getBoundingClientRect();
-        
-        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-
-        popover.style.position = 'absolute';
-        popover.style.visibility = 'hidden';
-        popover.style.zIndex = '1000000'; //确保在顶层
-        document.body.appendChild(popover);
-
         const popoverRect = popover.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const margin = 10; 
+        const vpWidth = window.innerWidth;
+        const vpHeight = window.innerHeight;
+        const margin = 12;
 
-        let top = iconRect.bottom + margin;
-        let left = iconRect.left;
+        const placements = [
+            { top: iconRect.top - popoverRect.height, left: iconRect.left - popoverRect.width },
+            { top: iconRect.bottom, left: iconRect.left - popoverRect.width },
+            { top: iconRect.top - popoverRect.height, left: iconRect.right },
+            { top: iconRect.bottom, left: iconRect.right }
+        ];
 
-        if (top + popoverRect.height > viewportHeight - margin) {
-            top = iconRect.top - popoverRect.height - margin;
-        }
+        let bestPlacement = null;
 
-        if (left + popoverRect.width > viewportWidth - margin) {
-            left = iconRect.right - popoverRect.width;
-        }
-
-        if (top < margin) {
-            top = margin;
+        for (const p of placements) {
+            if (
+                p.top > margin &&
+                p.left > margin &&
+                p.top + popoverRect.height < vpHeight - margin &&
+                p.left + popoverRect.width < vpWidth - margin
+            ) {
+                bestPlacement = p;
+                break;
+            }
         }
         
-        if (left < margin) {
-            left = margin;
+        if (!bestPlacement) {
+            bestPlacement = placements[0];
+            bestPlacement.top = Math.max(margin, Math.min(bestPlacement.top, vpHeight - popoverRect.height - margin));
+            bestPlacement.left = Math.max(margin, Math.min(bestPlacement.left, vpWidth - popoverRect.width - margin));
         }
-
-        popover.style.top = `${top + scrollY - 100}px`;
-        popover.style.left = `${left + scrollX + 50}px`;
         
-        popover.style.visibility = 'visible';
+        popover.style.position = 'fixed';
+        popover.style.top = `${bestPlacement.top - 20}px`;
+        popover.style.left = `${bestPlacement.left - 20}px`;
+        popover.style.zIndex = '2147483647';
     }
 
     closePopover() {
@@ -499,7 +456,7 @@ class AIPersonaInputEnhancer {
             this.activePopover = null;
         }
         if (this.popoverResizeHandler) {
-            window.removeEventListener('scroll', this.popoverResizeHandler);
+            window.removeEventListener('scroll', this.popoverResizeHandler, { capture: true });
             window.removeEventListener('resize', this.popoverResizeHandler);
             this.popoverResizeHandler = null;
         }
@@ -516,121 +473,29 @@ class AIPersonaInputEnhancer {
         console.log("AIPersonaEnhancer: Cleaning up all injected elements and listeners.");
 
         this.observer?.disconnect();
-        this.observer = null;
         this.closePopover();
 
-        const enhancementsToClean = new Set(this.trackedEnhancements);
-        enhancementsToClean.forEach(enhancement => {
+        this.trackedEnhancements.forEach(enhancement => {
             this.cleanupEnhancement(enhancement);
         });
-        this.trackedEnhancements.clear();
         
+        this.trackedEnhancements.clear();
         this.processedInputs = new WeakSet();
         this.enhancementCache = new WeakMap();
 
-        const styleEl = document.getElementById('ai-persona-styles');
-        if (styleEl) {
-            styleEl.remove();
-        }
+        document.getElementById('ai-persona-styles')?.remove();
     }
     
-    injectGlobalStyles() {
-        if (document.getElementById('ai-persona-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'ai-persona-styles';
-        style.textContent = `
-        :root {
-            --accent-color: #0969da;
-            --accent-color-hover: #085ec5;
-            --secondary-color: #6e7781;
-            --secondary-color-hover: #57606a;
-            --border-color: #d0d7de;
-            --popover-bg: #ffffff;
-            --text-primary: #1f2328;
-            --text-secondary: #6e7781;
-            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        .ai-persona-enhancement { pointer-events: auto; }
-        .ai-persona-icon {
-            width: 20px; height: 20px; color: white; border-radius: 4px; display: flex;
-            align-items: center; justify-content: center; cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-            transition: all 0.2s cubic-bezier(.25,.8,.25,1); font-family: var(--font-family);
-        }
-        .ai-persona-icon:hover { transform: scale(1.1); box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23); }
-        .ai-persona-icon.ai-persona-icon-status-disabled { filter: grayscale(80%) opacity(0.8); }
-        .ai-persona-icon.ai-persona-icon-status-disabled:hover { filter: grayscale(0%); opacity: 1; }
-        .ai-persona-icon svg { width: 20px; height: 20px; }
-
-        .ai-persona-popover {
-            background: var(--popover-bg); border: 1px solid var(--border-color);
-            border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-            min-width: 300px; max-width: 400px; max-height: 80vh;
-            overflow: hidden; font-family: var(--font-family);
-            display: flex; flex-direction: column; transition: opacity 0.1s ease-out, transform 0.1s ease-out;
-        }
-        .ai-persona-popover-content { position: relative; padding: 16px; }
-        .ai-persona-popover-close {
-            position: absolute; top: 12px; right: 12px; background: none; border: none;
-            font-size: 20px; line-height: 1; cursor: pointer; color: #999; width: 28px; height: 28px;
-            display: flex; align-items: center; justify-content: center; border-radius: 50%;
-        }
-        .ai-persona-popover-close:hover { background: #f5f5f5; color: #333; }
-        .ai-persona-popover-title {
-            font-size: 16px; font-weight: 600; margin-bottom: 12px;
-            color: var(--text-primary); padding-right: 24px;
-        }
-        .ai-persona-popover-body { color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
-        
-        .ai-persona-information { margin: 0 0 4px 0; font-size: 13px; color: var(--text-primary); }
-        .ai-persona-information-subtle { margin: 0 0 16px 0; font-size: 12px; color: var(--text-secondary); }
-        .ai-persona-information-auto-inject {margin: 0 0 8px 0; font-weight: bold;}
-
-        .ai-persona-row-item { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
-        .ai-persona-row-label { flex-shrink: 0; color: var(--text-primary); }
-        .ai-persona-select {
-            flex-grow: 1; padding: 8px 12px; background: #f6f8fa; border: 1px solid var(--border-color);
-            color: var(--text-primary); border-radius: 6px; font-family: inherit; font-size: 14px;
-            -webkit-appearance: none; appearance: none;
-            background-image: url('data:image/svg+xml;utf8,<svg fill="none" stroke="%23607D8B" stroke-width="2" stroke-linecap="round" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5"/></svg>');
-            background-repeat: no-repeat; background-position: right 12px center; cursor: pointer;
-        }
-        .ai-persona-select:focus { border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.3); outline: none; }
-
-        .ai-persona-button { width: 100%; height: 40px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease-out; box-sizing: border-box; border: 1px solid transparent; }
-        .ai-persona-button.ai-persona-button-primary { background-color: var(--accent-color); color: white; }
-        .ai-persona-button.ai-persona-button-primary:hover { background-color: var(--accent-color-hover); transform: translateY(-1px); box-shadow: 0 2px 4px rgba(9, 105, 218, 0.2); }
-        .ai-persona-button.ai-persona-button-secondary { background-color: transparent; color: var(--secondary-color); border: 1px solid var(--border-color); margin-top: 8px;}
-        .ai-persona-button.ai-persona-button-secondary:hover { background-color: #f6f8fa; color: var(--secondary-color-hover); border-color: var(--secondary-color); }
-        .ai-persona-button-block { width: 100%; display: block; flex: 1;}
-        .ai-persona-row-item-cleanup { border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;}
-        
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .ai-persona-loader {
-            margin: 20px auto; width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.1);
-            border-left-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite;
-        }
-      `;
-        document.head.appendChild(style);
-    }
-    
-    throttle(func, delay) {
-        let timeoutId;
-        let lastExecTime = 0;
-        return function (...args) {
-            const currentTime = Date.now();
-            const self = this;
-            if (currentTime - lastExecTime > delay) {
-                func.apply(self, args);
-                lastExecTime = currentTime;
-            } else {
-                clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    func.apply(self, args);
-                    lastExecTime = Date.now();
-                }, delay - (currentTime - lastExecTime));
+    // --- 工具方法 ---
+    throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
             }
-        };
+        }
     }
 
     sendMessageWithResponse(message) {
@@ -645,6 +510,62 @@ class AIPersonaInputEnhancer {
             window.addEventListener('message', messageHandler);
             window.postMessage(message);
         });
+    }
+
+    injectGlobalStyles() {
+        if (document.getElementById('ai-persona-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'ai-persona-styles';
+        // style.textContent is safe for <style> tags and compliant with Trusted Types policies.
+        style.textContent = `
+        :root {
+            --ap-primary: #6366f1; --ap-primary-hover: #4f46e5; --ap-secondary: #64748b; --ap-secondary-hover: #475569;
+            --ap-success: #10b981; --ap-warning: #f59e0b; --ap-error: #ef4444; --ap-surface: #ffffff;
+            --ap-surface-alt: #f8fafc; --ap-border: #e2e8f0; --ap-text: #0f172a; --ap-text-muted: #64748b;
+            --ap-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --ap-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            --ap-radius: 12px; --ap-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .ai-persona-input-wrapper { position: relative !important; display: inline-block !important; width: 100% !important; vertical-align: top !important; }
+        .ai-persona-icon-container { position: absolute !important; bottom: 5px !important; right: 8px !important; z-index: 10 !important; }
+        .ai-persona-icon { width: 20px !important; height: 20px !important; border-radius: 8px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; box-shadow: var(--ap-shadow) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
+        .ai-persona-icon:hover { transform: translateY(-2px) scale(1.05) !important; box-shadow: var(--ap-shadow-lg) !important;  }
+        .ai-persona-icon.ai-persona-icon-disabled { opacity: 0.8 !important; filter: grayscale(100%) !important;}
+        .ai-persona-icon.ai-persona-icon-disabled:hover { opacity: 1 !important; filter: grayscale(40%) !important; }
+        .ai-persona-icon img { width: 18px !important; height: 18px !important; }
+        .ai-persona-popover { position: fixed !important; background: rgba(255, 255, 255, 0.8) !important; backdrop-filter: blur(20px) saturate(180%) !important; -webkit-backdrop-filter: blur(20px) saturate(180%) !important; border: 1px solid var(--ap-border) !important; border-radius: var(--ap-radius) !important; box-shadow: var(--ap-shadow-lg) !important; width: 380px !important; max-width: calc(100vw - 24px) !important; font-family: var(--ap-font) !important; color: var(--ap-text) !important; z-index: 2147483647 !important; animation: popoverFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards !important; transform-origin: center center; }
+        @keyframes popoverFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .ai-persona-popover-header { display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 16px 20px !important; border-bottom: 1px solid var(--ap-border) !important; }
+        .popover-title { display: flex !important; align-items: center !important; gap: 10px !important; font-size: 16px !important; font-weight: 600 !important; }
+        .popover-close { all: unset !important; box-sizing: border-box !important; width: 28px !important; height: 28px !important; border-radius: 6px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 20px !important; color: var(--ap-text-muted) !important; cursor: pointer !important; transition: all 0.2s ease !important; }
+        .popover-close:hover { background: rgba(0, 0, 0, 0.05) !important; color: var(--ap-text) !important; }
+        .ai-persona-popover-content { padding: 20px !important; max-height: calc(80vh - 120px) !important; overflow-y: auto !important; }
+        .ai-persona-status-card { display: flex !important; align-items: center !important; gap: 12px !important; padding: 12px 16px !important; background: var(--ap-surface-alt) !important; border-radius: 8px !important; margin-bottom: 16px !important; border: 1px solid var(--ap-border) !important; }
+        .ai-persona-status-icon { width: 10px !important; height: 10px !important; border-radius: 50% !important; flex-shrink: 0 !important; }
+        .ai-persona-status-icon.active { background-color: var(--ap-success) !important; }
+        .ai-persona-status-icon.inactive { background-color: var(--ap-secondary) !important; }
+        .status-title { font-weight: 600 !important; font-size: 14px !important; margin-bottom: 2px !important; }
+        .status-subtitle { font-size: 12px !important; color: var(--ap-text-muted) !important; }
+        .ai-persona-notice { background-color: rgba(251, 191, 36, 0.1) !important; color: #92400e !important; padding: 12px 16px !important; border-radius: 8px !important; font-size: 13px !important; line-height: 1.5 !important; margin-bottom: 16px !important; border: 1px solid rgba(251, 191, 36, 0.3) !important; }
+        .ai-persona-label { display: block !important; font-size: 14px !important; font-weight: 500 !important; margin-bottom: 8px !important; }
+        .ai-persona-select-wrapper { position: relative !important; }
+        .ai-persona-select { width: 100% !important; padding: 10px 40px 10px 16px !important; border: 1px solid var(--ap-border) !important; border-radius: 8px !important; background-color: var(--ap-surface) !important; font-size: 14px !important; font-family: inherit !important; transition: all 0.2s ease !important; -webkit-appearance: none !important; appearance: none !important; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>') !important; background-repeat: no-repeat !important; background-position: right 12px center !important; }
+        .ai-persona-select:focus { outline: none !important; border-color: var(--ap-primary) !important; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important; }
+        .ai-persona-action-group { display: flex !important; gap: 12px !important; margin-top: 24px !important; }
+        .ai-persona-button { all: unset !important; box-sizing: border-box !important; flex: 1 !important; padding: 10px 20px !important; border-radius: 8px !important; font-size: 14px !important; font-weight: 500 !important; cursor: pointer !important; transition: all 0.2s ease !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; text-align: center; }
+        .ai-persona-button-primary { background-color: var(--ap-primary) !important; color: white !important; }
+        .ai-persona-button-primary:hover { background-color: var(--ap-primary-hover) !important; transform: translateY(-1px) !important; box-shadow: var(--ap-shadow) !important; }
+        .ai-persona-button-secondary { background-color: transparent !important; color: var(--ap-text-muted) !important; border: 1px solid var(--ap-border) !important; }
+        .ai-persona-button-secondary:hover { background-color: var(--ap-surface-alt) !important; border-color: #cbd5e1 !important; color: var(--ap-text) !important; }
+        .ai-persona-loader { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 32px; color: var(--ap-text-muted); }
+        .spinner { width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--ap-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .ai-persona-error-card { text-align: center; padding: 24px; }
+        .error-icon { font-size: 32px; margin-bottom: 12px; }
+        .error-text { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+        .error-details { font-size: 12px; color: var(--ap-text-muted); }
+        `;
+        document.head.appendChild(style);
     }
 }
 

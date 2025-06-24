@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "AIPersonaLoader AI人设加载器",
-	"version": "2.3.1",
+	"version": "2.4.0",
 	"description": "无缝将你配置的个人背景信息注入到对话中，确保AI从第一句话就理解你，做出个性化回复。全程无感，正常对话无需额外操作，支持多套人设、多种AI平台。",
 	"icons":{
 		"16": "img/icon.png",
@@ -11,7 +11,8 @@
 	"permissions":[
 		"storage",
 		"scripting",
-		"webNavigation"
+		"webNavigation",
+		"tabs"
 	],
 	"host_permissions": [
 		"https://*/*",
@@ -30,24 +31,7 @@
 			"run_at": "document_start"
 		},
 		{
-			"matches": [
-				"https://chat.deepseek.com/*",
-				"https://yuanbao.tencent.com/chat/*",
-				"https://chatgpt.com/*",
-				"https://grok.com/*",
-				"https://claude.ai/*",
-				"https://www.doubao.com/chat/*",
-				"https://www.kimi.com/*",
-				"https://yiyan.baidu.com/*",
-				"https://www.tongyi.com/qianwen/*",
-				"https://chatglm.cn/main/*",
-				"https://chat.baidu.com/*",
-				"https://aistudio.google.com/*",
-				"https://ai.quark.cn/*",
-				"https://deepseek.n.cn/*",
-				"https://chat.sensetime.com/*",
-				"https://gemini.google.com/*"
-			],
+			"matches": ["<all_urls>"],
 			"js": ["content/inputEnhancer.js"],
 			"run_at": "document_end",
 			"world":"MAIN"
@@ -68,6 +52,10 @@
 		},
 		{
 			"resources": ["img/icon.svg"],
+			"matches": ["<all_urls>"]
+		},
+		{
+			"resources": ["content/presets_white_list.json"],
 			"matches": ["<all_urls>"]
 		}
 	],
