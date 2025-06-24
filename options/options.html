@@ -8,83 +8,116 @@
 </head>
 <body>
     <div class="container">
-
-        <!-- (其余内容保持不变) -->
-        <!-- 左侧侧边栏：人设列表 -->
-        <aside class="sidebar">
-            <h2>我的全部人设</h2>
-            <ul id="personaList"></ul>
-            <button id="addPersonaButton" class="button secondary button-add-persona">
-                <span class="icon">+</span> 新建人设
-            </button>
+        <!-- ==================== 左侧主导航 ==================== -->
+        <aside class="main-nav">
+            <div class="nav-group">
+                <h2 class="nav-title">核心配置</h2>
+                <ul class="nav-list">
+                    <li id="navPersona" class="nav-item active" data-view="persona-view">👤 人设配置</li>
+                    <li id="navSites" class="nav-item" data-view="sites-view">🌐 站点管理</li>
+                </ul>
+            </div>
+            <div class="nav-footer" id="version">
+                
+            </div>
         </aside>
 
-        <!-- 右侧主内容区 -->
-        <main class="main-content">
-            <header class="main-header">
-                <h1 id="currentPersonaName"></h1>
-                <p>开启新对话时，插件将自动注入当前激活的人设。你也可以在对话中输入 <strong id="refresh-prompt">{{刷新人设}}</strong> 然后发送，手动触发刷新。</p>
-            </header>
+        <!-- ==================== 右侧内容视图容器 ==================== -->
+        <div class="main-view-container">
 
-            <div class="config-container">
-                <!-- Tab 导航 -->
-                <nav class="tab-nav">
-                    <button class="tab-button active" data-tab="info">👤 个人信息</button>
-                    <button class="tab-button" data-tab="responseFormat">⚙️ 输出规范</button>
-                    <button class="tab-button" data-tab="memory">🧠 用户记忆</button>
-                    <div class="tab-slider"></div>
-                </nav>
-
-                <!-- Tab 内容包裹器 -->
-                <div class="tab-content-wrapper">
-                    <div id="info" class="tab-pane active">
-                        <p class="description">AI 将参考这些信息更好地了解您。例如：你的名字、籍贯、工作等等</p>
-                        <ul id="infoList" class="item-list"></ul>
-                        <div class="button-group">
-                            <div class="button-group-item">
-                                <button class="recommend-button button secondary button-group-item-button" data-type="info">✨ 灵感中心</button>
-                            </div>
-                             <div class="button-group-item">
-                                <button class="copy-button button secondary button-group-item-button" data-type="info">批量复制/导出</button>
-                            </div>
-                            <div class="button-group-item">
-                                <button class="add-button button secondary button-group-item-button" data-type="info">添加/批量导入</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="responseFormat" class="tab-pane">
-                        <p class="description">定义 AI 回答时应遵循的风格和格式要求。例如：简洁的回答、直白的回答等等</p>
-                        <ul id="responseFormatList" class="item-list"></ul>
-                        <div class="button-group">
-                            <div class="button-group-item">
-                                <button class="recommend-button button secondary button-group-item-button" data-type="responseFormat">✨ 灵感中心</button>
-                            </div>
-                            <div class="button-group-item">
-                                <button class="copy-button button secondary button-group-item-button" data-type="responseFormat">批量复制/导出</button>
-                            </div>
-                            <div class="button-group-item">
-                                <button class="add-button button secondary button-group-item-button" data-type="responseFormat">添加/批量导入</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="memory" class="tab-pane">
-                        <p class="description">记录重要的事件、偏好或AI需要记住的额外事项。例如：我养了1只猫名字叫做南瓜</p>
-                        <ul id="memoryList" class="item-list"></ul>
-                        <div class="button-group">
-                            <div class="button-group-item">
-                                <button class="recommend-button button secondary button-group-item-button" data-type="memory">✨ 灵感中心</button>
-                            </div>
-                            <div class="button-group-item">
-                                <button class="copy-button button secondary button-group-item-button" data-type="memory">批量复制/导出</button>
-                            </div>
-                            <div class="button-group-item">
-                                <button class="add-button button secondary button-group-item-button" data-type="memory">添加/批量导入</button>
+            <!-- ==================== 视图 1: 人设配置 ==================== -->
+            <main id="persona-view" class="main-view active">
+                <div class="persona-manager-container">
+                    <!-- 左侧人设列表 -->
+                    <aside class="sidebar">
+                        <h2>我的全部人设</h2>
+                        <ul id="personaList"></ul>
+                        <button id="addPersonaButton" class="button secondary button-add-persona">
+                            <span class="icon">+</span> 新建人设
+                        </button>
+                    </aside>
+                    <!-- 右侧人设详情 -->
+                    <div class="main-content">
+                        <header class="main-header">
+                            <h1 id="currentPersonaName"></h1>
+                            <p>开启新对话时，插件将自动注入当前激活的人设。你也可以在对话中输入 <strong id="refresh-prompt">{{刷新人设}}</strong> 然后发送，手动触发刷新。</p>
+                        </header>
+                        <div class="config-container">
+                            <nav class="tab-nav">
+                                <button class="tab-button active" data-tab="info">👤 个人信息</button>
+                                <button class="tab-button" data-tab="responseFormat">⚙️ 输出规范</button>
+                                <button class="tab-button" data-tab="memory">🧠 用户记忆</button>
+                                <div class="tab-slider"></div>
+                            </nav>
+                            <div class="tab-content-wrapper">
+                                <div id="info" class="tab-pane active">
+                                    <p class="description">AI 将参考这些信息更好地了解您。例如：你的名字、籍贯、工作等等</p>
+                                    <ul id="infoList" class="item-list"></ul>
+                                    <div class="button-group">
+                                        <div class="button-group-item">
+                                            <button class="recommend-button button secondary button-group-item-button" data-type="info">✨ 灵感中心</button>
+                                        </div>
+                                         <div class="button-group-item">
+                                            <button class="copy-button button secondary button-group-item-button" data-type="info">批量复制/导出</button>
+                                        </div>
+                                        <div class="button-group-item">
+                                            <button class="add-button button secondary button-group-item-button" data-type="info">添加/批量导入</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="responseFormat" class="tab-pane">
+                                    <p class="description">定义 AI 回答时应遵循的风格和格式要求。例如：简洁的回答、直白的回答等等</p>
+                                    <ul id="responseFormatList" class="item-list"></ul>
+                                    <div class="button-group">
+                                        <div class="button-group-item">
+                                            <button class="recommend-button button secondary button-group-item-button" data-type="responseFormat">✨ 灵感中心</button>
+                                        </div>
+                                        <div class="button-group-item">
+                                            <button class="copy-button button secondary button-group-item-button" data-type="responseFormat">批量复制/导出</button>
+                                        </div>
+                                        <div class="button-group-item">
+                                            <button class="add-button button secondary button-group-item-button" data-type="responseFormat">添加/批量导入</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="memory" class="tab-pane">
+                                    <p class="description">记录重要的事件、偏好或AI需要记住的额外事项。例如：我养了1只猫名字叫做南瓜</p>
+                                    <ul id="memoryList" class="item-list"></ul>
+                                    <div class="button-group">
+                                        <div class="button-group-item">
+                                            <button class="recommend-button button secondary button-group-item-button" data-type="memory">✨ 灵感中心</button>
+                                        </div>
+                                        <div class="button-group-item">
+                                            <button class="copy-button button secondary button-group-item-button" data-type="memory">批量复制/导出</button>
+                                        </div>
+                                        <div class="button-group-item">
+                                            <button class="add-button button secondary button-group-item-button" data-type="memory">添加/批量导入</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </main>
+            </main>
+
+            <!-- ==================== 视图 2: 站点管理 ==================== -->
+            <main id="sites-view" class="main-view">
+                <header class="main-header">
+                    <h1>注入站点管理</h1>
+                    <p>管理允许显示“手动注入”按钮的网站列表。插件只会在启用状态的网站上注入功能图标。</p>
+                </header>
+                <div class="sites-manager-container">
+                    <ul id="whiteListItems" class="item-list">
+                        <!-- 网站列表将在这里动态生成 -->
+                    </ul>
+                    <!-- <div class="add-whitelist-form">
+                        <input type="text" id="newWhitelistHostInput" placeholder="输入网站域名，如 aistudio.google.com">
+                        <button id="addWhitelistButton" class="button primary">添加网站</button>
+                    </div> -->
+                </div>
+            </main>
+        </div>
     </div>
 
     <!-- 输入模态框 -->
@@ -99,21 +132,22 @@
         </div>
     </div>
 
-    <!-- 确认模态框 -->
+    <!-- 确认/编辑 模态框 (复用) -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <span class="modal-icon"></span>
                 <h3 class="modal-title"></h3>
             </div>
-            <p class="modal-body"></p>
+            <!-- 这个 p 标签将用于显示确认文本或编辑表单 -->
+            <div class="modal-body"></div>
             <div class="modal-actions">
                 <button id="confirmCancelButton" class="button secondary">取消</button>
                 <button id="confirmOkButton" class="button danger">确认</button>
             </div>
         </div>
     </div>
-
+    
     <!-- 推荐/风格模板 模态框 (通用容器) -->
     <div id="recommendModal" class="modal">
         <div class="modal-content">
@@ -126,7 +160,7 @@
         </div>
     </div>
 
-    <!-- NEW: 全局唯一的 Tooltip 元素 -->
+    <!-- 全局唯一的 Tooltip 元素 -->
     <div id="promptTooltip"></div>
 
     <script src="options.js"></script>
