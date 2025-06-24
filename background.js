@@ -398,38 +398,49 @@ ${originalPrompt}
 
                 getAllData()
                     .then(data => {
-                        const {apiList, userInfos, globalEnableState} = data;
-                        let newConfig = { ...config };
-                        const currentHostname = window.location.hostname;
-                        const apiOptions = apiList.find(item => item.hostname === currentHostname);
-                        const currentBody = JSON.parse(config.body || '{}');
+                        try {
+                            const {apiList, userInfos, globalEnableState} = data;
+                            let newConfig = { ...config };
+                            const currentHostname = window.location.hostname;
+                            const apiOptions = apiList?.find(item => item.hostname === currentHostname);
+                            const currentBody = JSON.parse(config.body || '{}');
 
-                        inject(currentBody, apiOptions, globalEnableState, userInfos, config?.headers, config?.url)
-                            .then(newBody => { 
-                                console.log('BODY', newBody)
-                                newConfig.body = JSON.stringify(newBody);
-                                handler.next(newConfig);
-                            })
-                            .catch(e => {
-                                console.warn('注入失败', e)
-                                handler.reject(e)
-                            })
+                            inject(currentBody, apiOptions, globalEnableState, userInfos, config?.headers, config?.url)
+                                .then(newBody => { 
+                                    console.log('BODY', newBody)
+                                    newConfig.body = JSON.stringify(newBody);
+                                    handler.next(newConfig);
+                                })
+                                .catch(e => {
+                                    console.warn('注入失败', e)
+                                    handler.next(config)
+                                })
+                        } catch (e) {
+                            handler.next(config);
+                        }
+                    })
+                    .catch(e => {
+                        handler.next(config);
                     });
             }
 
             // 托管fetch请求
             const fetchHandler = async (config, url) => {
-                if (!checkChatAPI(firstApiOption.api, url) ) {
+                try {
+                    if (!checkChatAPI(firstApiOption.api, url) ) {
+                        return config;
+                    }
+                    const {apiList, userInfos, globalEnableState} = await getAllData();
+                    let newConfig = { ...config };
+                    const currentHostname = window.location.hostname;
+                    const apiOptions = apiList.find(item => item.hostname === currentHostname);
+                    const currentBody = JSON.parse(config.body || '{}');
+                    const newBody = await inject(currentBody, apiOptions, globalEnableState, userInfos, config?.headers, url)
+                    newConfig.body = JSON.stringify(newBody);
+                    return newConfig;
+                } catch (e) {
                     return config;
                 }
-                const {apiList, userInfos, globalEnableState} = await getAllData();
-                let newConfig = { ...config };
-                const currentHostname = window.location.hostname;
-                const apiOptions = apiList.find(item => item.hostname === currentHostname);
-                const currentBody = JSON.parse(config.body || '{}');
-                const newBody = await inject(currentBody, apiOptions, globalEnableState, userInfos, config?.headers, url)
-                newConfig.body = JSON.stringify(newBody);
-                return newConfig;
             }
 
             hookFetch({
