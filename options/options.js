@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         personaView: document.getElementById('persona-view'),
         sitesView: document.getElementById('sites-view'),
         whiteListItems: document.getElementById('whiteListItems'),
-        newWhitelistHostInput: document.getElementById('newWhitelistHostInput'),
+        // newWhitelistHostInput: document.getElementById('newWhitelistHostInput'),
         // addWhitelistButton: document.getElementById('addWhitelistButton'),
         version: document.getElementById('version'),
     };
@@ -356,6 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /*
     async function handleAddWhitelistItem() {
         const userInput = elements.newWhitelistHostInput.value.trim();
         if (!userInput) {
@@ -388,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderWhitelist();
         elements.newWhitelistHostInput.value = '';
         toast('网站添加成功！');
-    }
+    }*/
 
     // --- 初始化 & 事件绑定 ---
     async function initialize() {
@@ -433,7 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.promptTooltip.addEventListener('mouseleave', () => tooltipHideTimer = setTimeout(hideTooltip, 200));
         // 手动添加白名单不可控因素过多，暂时禁用。
         // elements.addWhitelistButton.addEventListener('click', handleAddWhitelistItem);
-        elements.newWhitelistHostInput.addEventListener('keydown', e => e.key === 'Enter' && handleAddWhitelistItem());
+        // elements.newWhitelistHostInput.addEventListener('keydown', e => e.key === 'Enter' && handleAddWhitelistItem());
     }
     
     async function handleAddPersona() { const name = prompt('请输入新人设的名称：', `新人设 ${state.allPersonas.length + 1}`); if (name && name.trim()) { const newPersonaMeta = { id: `p_${Date.now()}`, name: name.trim(), isActive: false }; state.allPersonas.push(newPersonaMeta); await storage.saveManifest({ personas: state.allPersonas, activePersonaId: state.activePersonaId }); renderPersonaList(); toast(`已创建人设: ${name.trim()}`); } }
