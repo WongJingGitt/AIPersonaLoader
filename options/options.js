@@ -293,18 +293,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateRightPanel();
     }
     
-    // ... (人设增删改查、保存、删除等所有相关逻辑保持不变)
-    async function handleAddPersona() { /* ... */ }
-    async function handleRenamePersona(id) { /* ... */ }
-    async function handleDeletePersona(id) { /* ... */ }
-    function openInputModal(type) { /* ... */ }
-    async function handleSaveItem() { /* ... */ }
-    async function handleDeleteItem(type, index) { /* ... */ }
-    function copyToClipboard(text) { /* ... */ }
-    async function handleCopyItems(itemType) { /* ... */ }
-    function closeInputModal() { /* ... */ }
-    function closeConfirmModal() { /* ... */ }
-    
     // --- 白名单交互逻辑 ---
     async function handleToggleWhitelist(hostname, isEnabled) {
         const site = state.whiteList.find(s => s.hostname === hostname);
@@ -402,18 +390,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         toast('网站添加成功！');
     }
 
-    // ... (所有灵感中心和 Tooltip 相关逻辑保持不变)
-    function showTooltip(template, triggerElement) { /* ... */ }
-    function hideTooltip() { /* ... */ }
-    function renderStyleTemplateList() { /* ... */ }
-    function openRecommendModal(type) { /* ... */ }
-    function openSimpleRecommendModal(type) { /* ... */ }
-    async function handleAddSimpleRecommendation(type, text) { /* ... */ }
-    function openStyleTemplateModal() { /* ... */ }
-    function renderStyleTemplateDetail(template) { /* ... */ }
-    async function handleApplyStyle(template, mode) { /* ... */ }
-    function closeRecommendModal() { /* ... */ }
-    
     // --- 初始化 & 事件绑定 ---
     async function initialize() {
         let manifest = await storage.getManifest();
@@ -455,11 +431,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.refreshPrompt.onclick = () => copyToClipboard("{{刷新人设}}").then(() => toast('复制成功！')).catch(() => toast('复制失败！'));
         elements.promptTooltip.addEventListener('mouseenter', () => clearTimeout(tooltipHideTimer));
         elements.promptTooltip.addEventListener('mouseleave', () => tooltipHideTimer = setTimeout(hideTooltip, 200));
-        elements.addWhitelistButton.addEventListener('click', handleAddWhitelistItem);
+        // 手动添加白名单不可控因素过多，暂时禁用。
+        // elements.addWhitelistButton.addEventListener('click', handleAddWhitelistItem);
         elements.newWhitelistHostInput.addEventListener('keydown', e => e.key === 'Enter' && handleAddWhitelistItem());
     }
     
-    // 把之前省略的函数实现补全
     async function handleAddPersona() { const name = prompt('请输入新人设的名称：', `新人设 ${state.allPersonas.length + 1}`); if (name && name.trim()) { const newPersonaMeta = { id: `p_${Date.now()}`, name: name.trim(), isActive: false }; state.allPersonas.push(newPersonaMeta); await storage.saveManifest({ personas: state.allPersonas, activePersonaId: state.activePersonaId }); renderPersonaList(); toast(`已创建人设: ${name.trim()}`); } }
     async function handleRenamePersona(id) { const persona = state.allPersonas.find(p => p.id === id); if (!persona) return; const newName = prompt('请输入新的名称：', persona.name); if (newName && newName.trim() && newName.trim() !== persona.name) { persona.name = newName.trim(); await storage.saveManifest({ personas: state.allPersonas, activePersonaId: state.activePersonaId }); renderPersonaList(); updateRightPanel(); } }
     async function handleDeletePersona(id) { if (state.allPersonas.length <= 1) { toast('必须保留至少一个人设'); return; } const persona = state.allPersonas.find(p => p.id === id); if (!persona) return; const confirmed = await showConfirm({ title: '删除人设', body: `确定要永久删除人设 "<strong>${persona.name}</strong>" 吗？<br>此操作无法撤销。` }); if (confirmed) { state.allPersonas = state.allPersonas.filter(p => p.id !== id); if (state.activePersonaId === id) { state.activePersonaId = state.allPersonas[0].id; state.allPersonas[0].isActive = true; } await storage.saveManifest({ personas: state.allPersonas, activePersonaId: state.activePersonaId }); await storage.removePersonaData(id); renderPersonaList(); updateRightPanel(); toast(`已删除人设: ${persona.name}`); } }
