@@ -10,6 +10,7 @@ class AIPersonaInputEnhancer {
         this.isCleanedUp = false;
         this.svgIconUrl = null;
         this.cleanUpFromUser = false;
+        this.isInAutoInjectList = false;
 
         // --- 工具函数 ---
         this.throttledProcess = this.throttle(this.processInputs.bind(this), 100);
@@ -83,6 +84,7 @@ class AIPersonaInputEnhancer {
 
             const api_list = api_list_response?.data || [];
             this.activeAutoInject = api_list.some(item => item.hostname === window.location.hostname && item.enabled);
+            this.isInAutoInjectList = api_list.some(item => item.hostname === window.location.hostname);
             const globalInjectState = await this.sendMessageWithResponse({type: "GET_GLOBAL_ENABLE_STATE"});
             if (!globalInjectState.data) this.activeAutoInject = false;
 
@@ -306,7 +308,14 @@ class AIPersonaInputEnhancer {
     
             // 状态卡片
             const statusIcon = this.createDOMElement('div', { className: `ai-persona-status-icon ${this.activeAutoInject ? 'active' : 'inactive'}` });
-            const statusTitle = this.createDOMElement('div', { className: 'status-title', textContent: this.activeAutoInject ? '自动注入已启用' : '手动模式' });
+            const statusTitleText = this.activeAutoInject ? 
+                '自动注入已启用' : 
+                (
+                    this.isInAutoInjectList ?
+                        '手动模式，自动注入已关闭' :
+                        '手动模式，不支持自动注入'
+                );
+            const statusTitle = this.createDOMElement('div', { className: 'status-title', textContent: statusTitleText });
             const statusSubtitle = this.createDOMElement('div', { className: 'status-subtitle', textContent: activePersona?.name || '未选择人设' });
             const statusText = this.createDOMElement('div', { className: 'ai-persona-status-text', children: [statusTitle, statusSubtitle] });
             const statusCard = this.createDOMElement('div', { className: 'ai-persona-status-card', children: [statusIcon, statusText] });
@@ -315,6 +324,9 @@ class AIPersonaInputEnhancer {
             // 注入通知
             if (this.activeAutoInject) {
                 const notice = this.createDOMElement('div', { className: 'ai-persona-notice', textContent: '⚠️ 当前站点支持自动注入，新对话首条消息会自动添加人设。' });
+                container.appendChild(notice);
+            } else if (this.isInAutoInjectList && !this.activeAutoInject) {
+                const notice = this.createDOMElement('div', { className: 'ai-persona-notice', textContent: '⚠️ 当前站点支持自动注入，但是自动注入已被关闭。' });
                 container.appendChild(notice);
             }
     
@@ -523,6 +535,7 @@ class AIPersonaInputEnhancer {
             className: "ai-persona-status-icon",
         });
         icon.src = this.svgIconUrl;
+        
         const info = this.createDOMElement('div', {
             className: "ai-persona-status-info",
             textContent: `当前已激活 ${activePersona?.name || '默认人设'}`
