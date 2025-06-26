@@ -199,7 +199,7 @@ class AIPersonaInputEnhancer {
     enhanceInput(input) {
         if (this.enhancementCache.has(input)) return;
         const enhancement = this.createEnhancementUI(input);
-        if (!enhancement) return;
+        if (!enhancement || !enhancement.wrapper) return;
         this.enhancementCache.set(input, enhancement);
 
         const hostObserver = new MutationObserver(() => {
