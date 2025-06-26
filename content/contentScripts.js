@@ -127,19 +127,24 @@ ${fromInputEnhancer && inputEnhancerText}
 }
 
 async function getWhiteList () { 
-    const whiteList = await chrome.storage.local.get(["persona_white_list"]);
-    const whiteListURL = await chrome.runtime.getURL('content/presets_white_list.json');
-    
-    let fileWhiteList = await fetch(whiteListURL).then( response => response.json());
+    try {
+        const whiteList = await chrome.storage.local.get(["persona_white_list"]);
+        const whiteListURL = await chrome.runtime.getURL('content/presets_white_list.json');
+        
+        let fileWhiteList = await fetch(whiteListURL).then( response => response.json());
 
-    const storedList = whiteList.persona_white_list || [];
+        const storedList = whiteList.persona_white_list || [];
 
-    if (!storedList || storedList.length === 0) {
-        await chrome.storage.local.set({ "persona_white_list": fileWhiteList });
-        return fileWhiteList; 
+        if (!storedList || storedList.length === 0) {
+            await chrome.storage.local.set({ "persona_white_list": fileWhiteList });
+            return fileWhiteList; 
+        }
+        
+        return storedList;
+    } catch (error) {
+        console.error('Error loading white list:', error);
+        return [];
     }
-    
-    return storedList;
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
