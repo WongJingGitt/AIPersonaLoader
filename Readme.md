@@ -18,6 +18,7 @@
 </p>
 
 <p align="center">
+  <a href="docs/user-guide.md"><strong>📖 使用指南</strong></a> •
   <a href="#-核心功能">核心功能</a> •
   <a href="#-功能预览">功能预览</a> •
   <a href="#-两大注入模式">两大注入模式</a> •
