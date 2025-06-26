@@ -9,13 +9,12 @@ class AIPersonaInputEnhancer {
         this.activeAutoInject = false;
         this.isCleanedUp = false;
         this.svgIconUrl = null;
+        this.cleanUpFromUser = false;
 
         // --- 工具函数 ---
         this.throttledProcess = this.throttle(this.processInputs.bind(this), 100);
         
         // --- 初始化 ---
-        this.injectGlobalStyles();
-        window.addEventListener('beforeunload', () => this.cleanup());
         this.init();
         
         window.addEventListener('message', async event => {
@@ -27,12 +26,23 @@ class AIPersonaInputEnhancer {
                     iconButton.className = `ai-persona-icon ${!this.activeAutoInject ? 'ai-persona-icon-disabled' : ''}`.trim()
                 });
             }
+
+            if (event.data?.type === "REFRESH_PERSONA_MANIFEST") {
+                this.hideStatusIndicator();
+                await this.showStatusIndicator();
+            }
         })
 
     }
 
-    async init() {
-        if (this.isCleanedUp) return;
+    async init(forceReinit=false) {
+        if (this.isCleanedUp && !forceReinit) return;
+        
+        this.cleanUpFromUser = false;
+        this.isCleanedUp = false;
+
+        this.injectGlobalStyles();
+        window.addEventListener('beforeunload', () => this.cleanup());
 
         // 等待DOM加载完成
         if (document.readyState === 'loading') {
@@ -52,7 +62,7 @@ class AIPersonaInputEnhancer {
         // 延迟执行，确保页面完全渲染
         return await new Promise((resolve, reject) => {
             setTimeout(() => {
-                if (this.isCleanedUp) {
+                if (this.isCleanedUp && !forceReinit) {
                     reject();
                     return;
                 }; 
@@ -77,6 +87,7 @@ class AIPersonaInputEnhancer {
             if (!globalInjectState.data) this.activeAutoInject = false;
 
             this.svgIconUrl = svg_icon_response?.data;
+            this.updateStatusIndicator();
 
         } catch (error) {
             console.warn("AIPersonaInputEnhancer: Could not get initial state from background. Using default.", error.message);
@@ -344,7 +355,10 @@ class AIPersonaInputEnhancer {
                     console.error("在注入人设时发生错误:", error);
                 }
             });
-            secondaryButton.addEventListener('click', () => this.cleanup());
+            secondaryButton.addEventListener('click', () => {
+                this.cleanup();
+                this.cleanUpFromUser = true;
+            });
     
         } catch (error) {
             console.warn("AIPersonaInputEnhancer: Could not get persona manifest from background.", error.message);
@@ -488,6 +502,43 @@ class AIPersonaInputEnhancer {
         }
     }
 
+    updateStatusIndicator() {
+        if (this.activeAutoInject) {
+            this.showStatusIndicator();
+        } else {
+            this.hideStatusIndicator();
+        }
+    }
+    
+    async showStatusIndicator() {
+        if (this.statusIndicator) return;
+        
+        const manifestResponse = await this.sendMessageWithResponse({type: "GET_PERSONA_MANIFEST"});
+        const activePersona = manifestResponse?.data?.personas?.find(p => p.id === manifestResponse.data.activePersonaId);
+        
+        this.statusIndicator = this.createDOMElement('div', {
+            className: 'ai-persona-status-indicator',
+        });
+        const icon = this.createDOMElement('img', {
+            className: "ai-persona-status-icon",
+        });
+        icon.src = this.svgIconUrl;
+        const info = this.createDOMElement('div', {
+            className: "ai-persona-status-info",
+            textContent: `当前已激活 ${activePersona?.name || '默认人设'}`
+        });
+        this.statusIndicator.appendChild(icon);
+        this.statusIndicator.appendChild(info);
+        document.body.appendChild(this.statusIndicator);
+    }
+    
+    hideStatusIndicator() {
+        if (this.statusIndicator) {
+            this.statusIndicator.remove();
+            this.statusIndicator = null;
+        }
+    }
+
     cleanup() {
         if (this.isCleanedUp) return;
         this.isCleanedUp = true;
@@ -506,6 +557,7 @@ class AIPersonaInputEnhancer {
         this.enhancementCache = new WeakMap();
 
         document.getElementById('ai-persona-styles')?.remove();
+        this.hideStatusIndicator();
     }
     
     // --- 工具方法 ---
@@ -548,6 +600,7 @@ class AIPersonaInputEnhancer {
             --ap-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
             --ap-radius: 12px; --ap-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
+        
         .ai-persona-input-wrapper { position: relative !important; display: inline-block !important; width: 100% !important; vertical-align: top !important; }
         .ai-persona-icon-container { position: absolute !important; bottom: 5px !important; right: 8px !important; z-index: 10 !important; }
         .ai-persona-icon { width: 20px !important; height: 20px !important; border-radius: 8px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; box-shadow: var(--ap-shadow) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
@@ -586,9 +639,35 @@ class AIPersonaInputEnhancer {
         .error-icon { font-size: 32px; margin-bottom: 12px; }
         .error-text { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
         .error-details { font-size: 12px; color: var(--ap-text-muted); }
+        .ai-persona-status-indicator {
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            z-index: 9999 !important;
+            pointer-events: none !important;
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(8px) !important;
+            padding: 8px 12px !important;
+            border-radius: 20px !important;
+            font-size: 12px !important;
+            color: var(--ap-text-muted) !important;
+            opacity: 0.7 !important;
+            transition: opacity 0.3s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            justify-content: space-between !important;
+        }
+        .ai-persona-status-icon {
+            width: 16px !important;
+            height: 16px !important;
+            border-radius: 0 !important;
+        }
         `;
         document.head.appendChild(style);
     }
+
+    
 }
 
 if (typeof window !== 'undefined') {

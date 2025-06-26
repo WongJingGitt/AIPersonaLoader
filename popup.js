@@ -249,7 +249,13 @@ ${memory.join('\n')}
         const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
         const activeURL = new URL(tab.url);
         const isInWhiteList = whiteList.some(item => item.hostname === activeURL.hostname);
-        const isInjected = whiteList.some(item => item.hostname === activeURL.hostname && item.enabled)
+        let inputCleanedUp = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => window.aiPersonaEnhancer.cleanUpFromUser,
+            world: "MAIN"
+        })
+        inputCleanedUp = inputCleanedUp[0].result;
+        const isInjected = whiteList.some(item => item.hostname === activeURL.hostname && item.enabled && !inputCleanedUp)
         const changeButtonState = (a, b) => {
             if (!a) {
                 inputEnhancerButton.classList.add('primary');
@@ -300,7 +306,7 @@ ${memory.join('\n')}
             }
             await chrome.scripting.executeScript({
                 target: {tabId: tab.id},
-                func: () => window.aiPersonaEnhancer.init(),
+                func: () => window.aiPersonaEnhancer.init(true),
                 world: 'MAIN'
             })
         });

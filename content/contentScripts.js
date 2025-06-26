@@ -143,8 +143,15 @@ async function getWhiteList () {
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (changes?.globalEnableState || changes?.persona_loader_api_list) {
+    if (
+        changes?.globalEnableState ||   // 全局自动注入开关状态改变
+        changes?.persona_loader_api_list    // 指定站点自动注入信息列表改变
+    ) {
         window.postMessage({type: "REFRESH_GLOBAL_STATE", data: changes[Object.keys(changes)[0]]?.newValue})
+    }
+
+    if (changes?.persona_manifest) { // 当前选中的人设方案改变、人设方案列表改变
+        window.postMessage({type: "REFRESH_PERSONA_MANIFEST", data: changes[Object.keys(changes)[0]]?.newValue})
     }
 })
 
