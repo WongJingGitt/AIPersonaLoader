@@ -658,7 +658,7 @@ class AIPersonaInputEnhancer {
             gap: 8px !important;
             justify-content: space-between !important;
         }
-        .ai-persona-status-icon {
+        .ai-persona-status-indicator .ai-persona-status-icon {
             width: 16px !important;
             height: 16px !important;
             border-radius: 0 !important;
