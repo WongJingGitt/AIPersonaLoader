@@ -254,7 +254,7 @@ ${memory.join('\n')}
             func: () => window.aiPersonaEnhancer.cleanUpFromUser,
             world: "MAIN"
         })
-        inputCleanedUp = inputCleanedUp[0].result;
+        inputCleanedUp = inputCleanedUp[0].result ?? false;
         const isInjected = whiteList.some(item => item.hostname === activeURL.hostname && item.enabled && !inputCleanedUp)
         const changeButtonState = (a, b) => {
             if (!a) {
