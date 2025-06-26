@@ -180,11 +180,6 @@ ${memory.join('\n')}
         };
     };
 
-    // --- 渲染站点列表 ---
-    async function renderSiteToggles() { /* ... (函数体不变) ... */ }
-    function updateSiteListDisabledState(isGlobalEnabled) { /* ... (函数体不变) ... */ }
-    function updateGlobalStatusText(isEnabled) { /* ... (函数体不变) ... */ }
-
     // --- 初始化加载 ---
     async function initialize() {
         API_LIST = await getApiData();
