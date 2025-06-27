@@ -148,16 +148,22 @@ async function getWhiteList () {
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (
-        changes?.globalEnableState ||   // 全局自动注入开关状态改变
-        changes?.persona_loader_api_list    // 指定站点自动注入信息列表改变
-    ) {
-        window.postMessage({type: "REFRESH_GLOBAL_STATE", data: changes[Object.keys(changes)[0]]?.newValue})
+    const sendEvents = {
+        // 对全局自动注入开关的监听，用作界面注入按钮状态更新
+        globalEnableState: () =>  window.postMessage({type: "REFRESH_GLOBAL_STATE", data: changes?.globalEnableState?.newValue}),
+        // 对站点自动注入开关的监听，用作界面注入按钮状态更新
+        persona_loader_api_list: () => window.postMessage({type: "REFRESH_GLOBAL_STATE", data: changes?.persona_loader_api_list?.newValue}),
+        // 对当前选择的人设监听，用作更新右上角的文案
+        persona_manifest: () => window.postMessage({type: "REFRESH_PERSONA_MANIFEST", data: changes?.persona_manifest?.newValue}),
+        // 对白名单的监听，用作更新界面注入按钮和提示的挂载与卸载
+        persona_white_list: () => window.postMessage({type: "REFRESH_WHITE_LIST", data: changes?.persona_white_list?.newValue})
     }
 
-    if (changes?.persona_manifest) { // 当前选中的人设方案改变、人设方案列表改变
-        window.postMessage({type: "REFRESH_PERSONA_MANIFEST", data: changes[Object.keys(changes)[0]]?.newValue})
-    }
+    Object.keys(changes).forEach(key => {
+        if (sendEvents?.[key]) {
+            sendEvents[key]();
+        }
+    });
 })
 
 window.addEventListener("message", async function (event) { 

@@ -20,19 +20,29 @@ class AIPersonaInputEnhancer {
         this.init();
 
         window.addEventListener('message', async event => {
-            if (event.data?.type === "REFRESH_GLOBAL_STATE") {
-                await this.refreshGlobalState();
-                this.trackedEnhancements.forEach(item => {
-                    const iconButton = item?.iconButton;
-                    if (!iconButton) return;
-                    iconButton.className = `ai-persona-icon ${!this.activeAutoInject ? 'ai-persona-icon-disabled' : ''}`.trim()
-                });
-            }
-
-            if (event.data?.type === "REFRESH_PERSONA_MANIFEST") {
-                this.hideStatusIndicator();
-                await this.showStatusIndicator();
-            }
+            const eventType = event.data?.type;
+            const eventList = {
+                "REFRESH_WHITE_LIST": async () => {
+                    // 监听options页面的站点开关，针对开关状态实时把注入状态更新到界面
+                    try {this.cleanup()} catch (e) { };
+                    await this.init(true);
+                },
+                "REFRESH_GLOBAL_STATE": async () => {
+                    // 监听全局自动注入、当前站点自动注入开关状态，根据状态改变界面上注入的形态
+                    await this.refreshGlobalState();
+                    this.trackedEnhancements.forEach(item => {
+                        const iconButton = item?.iconButton;
+                        if (!iconButton) return;
+                        iconButton.className = `ai-persona-icon ${!this.activeAutoInject ? 'ai-persona-icon-disabled' : ''}`.trim()
+                    });
+                },
+                "REFRESH_PERSONA_MANIFEST": async () => {
+                    // 监听人设列表更新，刷新右上角提示信息。
+                    this.hideStatusIndicator();
+                    await this.showStatusIndicator();
+                },
+            };
+            await eventList[eventType]?.();
         })
 
     }
@@ -61,7 +71,10 @@ class AIPersonaInputEnhancer {
         });
     }
 
+    
     async init(forceReinit=false) {
+        // 1. 调用cleanup函数，手动清理了注入实例之后isCleanedUp会设置为true,
+        // 2. 为了防止手动关闭之后又被意外拉起，所以手动关闭之后必须主动要携带forceReinit=true才能重新注入。
         if (this.isCleanedUp && !forceReinit) return;
 
         this.cleanUpFromUser = false;
@@ -582,7 +595,7 @@ class AIPersonaInputEnhancer {
         
         const info = this.createDOMElement('div', {
             className: "ai-persona-status-info",
-            textContent: `当前已激活 ${activePersona?.name || '默认人设'}`
+            textContent: `自动注入已激活：${activePersona?.name || '默认人设'}`
         });
 
         const style = this.createDOMElement('style', {
