@@ -11,13 +11,14 @@ class AIPersonaInputEnhancer {
         this.svgIconUrl = null;
         this.cleanUpFromUser = false;
         this.isInAutoInjectList = false;
+        this.statusRenderFirstTime = true;
 
         // --- 工具函数 ---
         this.throttledProcess = this.throttle(this.processInputs.bind(this), 100);
-        
+
         // --- 初始化 ---
         this.init();
-        
+
         window.addEventListener('message', async event => {
             if (event.data?.type === "REFRESH_GLOBAL_STATE") {
                 await this.refreshGlobalState();
@@ -36,12 +37,45 @@ class AIPersonaInputEnhancer {
 
     }
 
+    waitForDOMStable(timeout = 2000, debounce = 100) {
+        return new Promise(resolve => {
+            let timer;
+            const observer = new MutationObserver(() => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    observer.disconnect();
+                    resolve();
+                }, debounce);
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+            
+            setTimeout(() => {
+                observer.disconnect();
+                resolve();
+            }, timeout);
+        });
+    }
+
     async init(forceReinit=false) {
         if (this.isCleanedUp && !forceReinit) return;
-        
+
         this.cleanUpFromUser = false;
         this.isCleanedUp = false;
 
+        // 解决界面异步JS未执行完毕时在界面插入DOM引发的错误
+        // 判断是否时第一次执行，然后判断1秒内如果DOM树没有变化，则认为JS执行完毕。
+        // 虽然不够完美，但是能解决大部分场景
+        if (this.statusRenderFirstTime) {
+            this.statusRenderFirstTime = false;
+            await this.waitForDOMStable(30000, 1000)
+        }
+
+        this.createPopoverHostNode();
         this.injectGlobalStyles();
         window.addEventListener('beforeunload', () => this.cleanup());
 
@@ -74,6 +108,11 @@ class AIPersonaInputEnhancer {
         })
     }
     
+    createPopoverHostNode () {
+        this.popoverHostNode = this.createDOMElement('div', {className: 'ai-persona-popover-host'});
+        this.popoverHostNode.attachShadow({mode: 'open'});
+        document.body.appendChild(this.popoverHostNode);
+    }
     
     async refreshGlobalState() {
         try {
@@ -398,12 +437,14 @@ class AIPersonaInputEnhancer {
         const loader = this.createDOMElement('div', { className: 'ai-persona-loader', children: [spinner, loaderText] });
         const contentContainer = this.createDOMElement('div', { className: 'ai-persona-popover-content', children: [loader] });
     
-        this.activePopover = this.createDOMElement('div', {
+        const activePopover = this.createDOMElement('div', {
             className: 'ai-persona-popover',
             children: [header, contentContainer]
         });
-    
-        document.body.appendChild(this.activePopover);
+        activePopover.id = 'ai-persona-popover'
+        
+        this.popoverHostNode.shadowRoot.appendChild(activePopover);
+        this.activePopover = this.popoverHostNode.shadowRoot.querySelector('#ai-persona-popover');
         this.positionPopover(this.activePopover, iconButton);
     
         closeBtn.addEventListener('click', () => this.closePopover());
@@ -446,7 +487,7 @@ class AIPersonaInputEnhancer {
         window.addEventListener('resize', this.popoverResizeHandler, { passive: true });
     
         this.outsideClickHandler = (e) => {
-            if (this.activePopover && !this.activePopover.contains(e.target) && !iconButton.contains(e.target)) {
+            if (this.activePopover && !this.popoverHostNode.contains(e.target) && !iconButton.contains(e.target)) {
                 this.closePopover();
             }
         };
@@ -523,12 +564,15 @@ class AIPersonaInputEnhancer {
     }
     
     async showStatusIndicator() {
-        if (this.statusIndicator) return;
+        if (this.indicatorHostElement) return;
         
         const manifestResponse = await this.sendMessageWithResponse({type: "GET_PERSONA_MANIFEST"});
         const activePersona = manifestResponse?.data?.personas?.find(p => p.id === manifestResponse.data.activePersonaId);
+
+        this.indicatorHostElement = this.createDOMElement('div', { className: 'ai-persona-status-host' })
+        this.indicatorHostElement.attachShadow({ mode: 'open' });
         
-        this.statusIndicator = this.createDOMElement('div', {
+        const statusIndicator = this.createDOMElement('div', {
             className: 'ai-persona-status-indicator',
         });
         const icon = this.createDOMElement('img', {
@@ -540,15 +584,45 @@ class AIPersonaInputEnhancer {
             className: "ai-persona-status-info",
             textContent: `当前已激活 ${activePersona?.name || '默认人设'}`
         });
-        this.statusIndicator.appendChild(icon);
-        this.statusIndicator.appendChild(info);
-        document.body.appendChild(this.statusIndicator);
+
+        const style = this.createDOMElement('style', {
+            textContent: `.ai-persona-status-indicator {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    padding: 8px 12px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    color: var(--ap-text-muted) !important;
+    opacity: 0.7 !important;
+    transition: opacity 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    justify-content: space-between !important;
+}
+.ai-persona-status-indicator .ai-persona-status-icon {
+    width: 16px !important;
+    height: 16px !important;
+    border-radius: 0 !important;
+}`
+        });
+
+        this.indicatorHostElement.shadowRoot.appendChild(style);
+        statusIndicator.appendChild(icon);
+        statusIndicator.appendChild(info);
+        this.indicatorHostElement.shadowRoot.appendChild(statusIndicator);
+        document.body.appendChild(this.indicatorHostElement);
     }
     
     hideStatusIndicator() {
-        if (this.statusIndicator) {
-            this.statusIndicator.remove();
-            this.statusIndicator = null;
+        if (this.indicatorHostElement) {
+            this.indicatorHostElement.remove();
+            this.indicatorHostElement = null;
         }
     }
 
@@ -614,6 +688,7 @@ class AIPersonaInputEnhancer {
             --ap-radius: 12px; --ap-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
         
+        .ai-persona-popover-host {all: initial;}
         .ai-persona-input-wrapper { position: relative !important; display: inline-block !important; width: 100% !important; vertical-align: top !important; }
         .ai-persona-icon-container { position: absolute !important; bottom: 5px !important; right: 8px !important; z-index: 10 !important; }
         .ai-persona-icon { width: 20px !important; height: 20px !important; border-radius: 8px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; box-shadow: var(--ap-shadow) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
@@ -652,32 +727,13 @@ class AIPersonaInputEnhancer {
         .error-icon { font-size: 32px; margin-bottom: 12px; }
         .error-text { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
         .error-details { font-size: 12px; color: var(--ap-text-muted); }
-        .ai-persona-status-indicator {
-            position: fixed !important;
-            top: 20px !important;
-            right: 20px !important;
-            z-index: 9999 !important;
-            pointer-events: none !important;
-            background: rgba(255, 255, 255, 0.8) !important;
-            backdrop-filter: blur(8px) !important;
-            padding: 8px 12px !important;
-            border-radius: 20px !important;
-            font-size: 12px !important;
-            color: var(--ap-text-muted) !important;
-            opacity: 0.7 !important;
-            transition: opacity 0.3s ease !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-            justify-content: space-between !important;
-        }
-        .ai-persona-status-indicator .ai-persona-status-icon {
-            width: 16px !important;
-            height: 16px !important;
-            border-radius: 0 !important;
-        }
         `;
         document.head.appendChild(style);
+        if (this.popoverHostNode) {
+            // 暂时没有分离popver的样式，简单粗暴一点插入两份
+            const styleClone = style.cloneNode(true);
+            this.popoverHostNode.shadowRoot.appendChild(styleClone);
+        }
     }
 
     
