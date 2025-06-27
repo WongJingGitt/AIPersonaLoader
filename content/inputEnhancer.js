@@ -88,8 +88,8 @@ class AIPersonaInputEnhancer {
             await this.waitForDOMStable(30000, 1000)
         }
 
-        this.createPopoverHostNode();
         this.injectGlobalStyles();
+        this.createPopoverHostNode();
         window.addEventListener('beforeunload', () => this.cleanup());
 
         // 等待DOM加载完成
@@ -124,6 +124,8 @@ class AIPersonaInputEnhancer {
     createPopoverHostNode () {
         this.popoverHostNode = this.createDOMElement('div', {className: 'ai-persona-popover-host'});
         this.popoverHostNode.attachShadow({mode: 'open'});
+        const styleNode = this.globalStyle.cloneNode(true);
+        this.popoverHostNode.shadowRoot.appendChild(styleNode);
         document.body.appendChild(this.popoverHostNode);
     }
     
@@ -420,8 +422,7 @@ class AIPersonaInputEnhancer {
                 }
             });
             secondaryButton.addEventListener('click', () => {
-                this.cleanup();
-                this.cleanUpFromUser = true;
+                this.cleanup(true);
             });
     
         } catch (error) {
@@ -610,7 +611,7 @@ class AIPersonaInputEnhancer {
     padding: 8px 12px !important;
     border-radius: 20px !important;
     font-size: 12px !important;
-    color: var(--ap-text-muted) !important;
+    color: #64748b !important;
     opacity: 0.7 !important;
     transition: opacity 0.3s ease !important;
     display: inline-flex !important;
@@ -639,8 +640,18 @@ class AIPersonaInputEnhancer {
         }
     }
 
-    cleanup() {
+    cleanup(fromUser=false) {
         if (this.isCleanedUp) return;
+
+        // 判断是否是来自Popover中主动停用
+        if (fromUser) {
+            this.cleanUpFromUser = true;
+            this.popoverHostNode.remove();
+            this.popoverHostNode = null;
+        } else {
+            // 主动停用输入框的手动注入不应该取消右上角的提示。不然容易造成误解自动注入也停用了
+            this.hideStatusIndicator();
+        }
         this.isCleanedUp = true;
         
         console.log("AIPersonaEnhancer: Cleaning up all injected elements and listeners.");
@@ -657,7 +668,6 @@ class AIPersonaInputEnhancer {
         this.enhancementCache = new WeakMap();
 
         document.getElementById('ai-persona-styles')?.remove();
-        this.hideStatusIndicator();
     }
     
     // --- 工具方法 ---
@@ -688,10 +698,9 @@ class AIPersonaInputEnhancer {
 
     injectGlobalStyles() {
         if (document.getElementById('ai-persona-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'ai-persona-styles';
-        // style.textContent is safe for <style> tags and compliant with Trusted Types policies.
-        style.textContent = `
+        this.globalStyle = document.createElement('style');
+        this.globalStyle.id = 'ai-persona-styles';
+        this.globalStyle.textContent = `
         :root {
             --ap-primary: #6366f1; --ap-primary-hover: #4f46e5; --ap-secondary: #64748b; --ap-secondary-hover: #475569;
             --ap-success: #10b981; --ap-warning: #f59e0b; --ap-error: #ef4444; --ap-surface: #ffffff;
@@ -741,12 +750,7 @@ class AIPersonaInputEnhancer {
         .error-text { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
         .error-details { font-size: 12px; color: var(--ap-text-muted); }
         `;
-        document.head.appendChild(style);
-        if (this.popoverHostNode) {
-            // 暂时没有分离popver的样式，简单粗暴一点插入两份
-            const styleClone = style.cloneNode(true);
-            this.popoverHostNode.shadowRoot.appendChild(styleClone);
-        }
+        document.head.appendChild(this.globalStyle);
     }
 
     
