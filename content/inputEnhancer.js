@@ -38,8 +38,7 @@ class AIPersonaInputEnhancer {
                 },
                 "REFRESH_PERSONA_MANIFEST": async () => {
                     // 监听人设列表更新，刷新右上角提示信息。
-                    this.hideStatusIndicator();
-                    await this.showStatusIndicator();
+                    await this.refreshGlobalState();
                 },
             };
             await eventList[eventType]?.();
@@ -571,6 +570,7 @@ class AIPersonaInputEnhancer {
 
     updateStatusIndicator() {
         if (this.activeAutoInject) {
+            this.hideStatusIndicator();
             this.showStatusIndicator();
         } else {
             this.hideStatusIndicator();
