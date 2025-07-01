@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const personaSelect = document.getElementById('personaSelect'); // 新增
     const inputEnhancerButton = document.getElementById('inputEnhancerButton');
     const inputEnhancerText = document.getElementById('inputEnhancerInfo');
+    const newVersionText = document.getElementById('new-version-text');
 
     let API_LIST = [];
 
@@ -412,4 +413,29 @@ ${memory.join('\n')}
         }
     });
 
+    async function compareVersions () {
+        let remoteManifest = await chrome.storage.local.get(['manifest']);
+        if (!remoteManifest?.manifest || new Date().getTime() - remoteManifest.manifest.timestamp > 86400000 ) {
+            const response = await fetch('https://raw.githubusercontent.com/WongJingGitt/AIPersonaLoader/refs/heads/master/manifest.json')
+            remoteManifest = await response.json();
+            await chrome.storage.local.set({ manifest: {...remoteManifest, timestamp: new Date().getTime()}});
+        }else remoteManifest = remoteManifest.manifest;
+
+        const localManifest = chrome.runtime.getManifest();
+        const remoteVersion = remoteManifest?.version;
+        const localVersion = localManifest?.version;
+        const compareResult = window.compareVersions.compareVersions(remoteVersion, localVersion);
+        if (compareResult > 0) {
+            newVersionText.textContent = '有新版本'
+            newVersionText.addEventListener('click', () => {
+                window.open('https://codeload.github.com/WongJingGitt/AIPersonaLoader/zip/refs/heads/master');
+            })
+        }
+    }
+
+    try {
+        await compareVersions()
+    } catch (error) {
+        console.log("PersonaLoader Popup: 远程版本获取失败");
+    }
 });
