@@ -10,7 +10,7 @@
 
 <!-- Optimized Badges -->
 <p align="center">
-    <a href="#"><img src="https://img.shields.io/badge/Version-2.4.0-orange.svg?style=for-the-badge" alt="Version 2.4.0"></a>
+    <a href="#"><img src="https://img.shields.io/badge/Version-2.4.0-orange.svg?style=for-the-badge" alt="Version 2.5.0"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=for-the-badge" alt="License Apache 2.0"></a>
     <a href="#"><img src="https://img.shields.io/badge/Status-Active-brightgreen.svg?style=for-the-badge" alt="Status Active"></a>
     <a href="#"><img src="https://img.shields.io/badge/Chrome-Extension-informational.svg?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome Extension"></a>
