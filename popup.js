@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inputEnhancerButton = document.getElementById('inputEnhancerButton');
     const inputEnhancerText = document.getElementById('inputEnhancerInfo');
     const newVersionText = document.getElementById('new-version-text');
+    const openUserGuide = document.getElementById('openUserGuide');
 
     let API_LIST = [];
 
@@ -205,6 +206,13 @@ ${memory.join('\n')}
                 chrome.tabs.create({ url: optionsPageUrl });
             }
         });
+    }
+
+    if (openUserGuide) {
+        openUserGuide.addEventListener('click', () => {
+            const userGuideUrl = chrome.runtime.getURL('docs/user-guide.html');
+            chrome.tabs.create({ url: userGuideUrl });
+        })
     }
 
     globalEnableToggle.addEventListener('change', async (event) => { /* ... (函数体不变) ... */ });
@@ -429,6 +437,7 @@ ${memory.join('\n')}
             newVersionText.textContent = '有新版本'
             newVersionText.addEventListener('click', () => {
                 window.open('https://codeload.github.com/WongJingGitt/AIPersonaLoader/zip/refs/heads/master');
+                toast("已在浏览器中下载新版本，请前往浏览器查看。", 10000)
             })
         }
     }

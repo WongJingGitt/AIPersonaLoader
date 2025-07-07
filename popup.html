@@ -158,7 +158,7 @@
         .button.secondary:hover { border-color: var(--text-color-muted); background-color: #f3f5f7; }
         .button:disabled { background-color: var(--success-color) !important; border-color: transparent !important; cursor: default; transform: none; box-shadow: none; color: white; }
         
-        .section-header { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-color-muted); padding: 0 16px 8px 16px; border-bottom: 1px solid #e9ecef; }
+        .section-header { display: inline-flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-color-muted); padding: 0 16px 8px 16px; border-bottom: 1px solid #e9ecef; }
         #siteToggleList { max-height: 460px; overflow-y: auto; padding: 8px 4px 8px 16px; }
         .site-item { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 0; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease, transform 0.2s ease; }
         .site-item:hover { background-color: #f6f8fa; }
@@ -195,6 +195,26 @@
             cursor: pointer;
         }
         .panel-top-title .new-version:hover { color: var(--success-color-hover); }
+        .info-icon {width: 24px; height: 24px; cursor: pointer; position: relative;}
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 100%;
+            right: -200%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: #333;
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .tooltip:hover::after {
+            opacity: 1;
+        }
     </style>
     <script src="utils/compareVersion.js"></script>
 </head>
@@ -306,7 +326,15 @@
         </div>
         <!-- Right Panel: Site List -->
         <div class="right-panel" id="siteListSection">
-            <div class="section-header">自动注入支持的网站 (可单独关闭)</div>
+            <div class="section-header">
+                <div>自动注入支持的网站 (可单独关闭)</div>
+                <div class="info-icon tooltip" data-tooltip="点击查看用户指引" id="openUserGuide">
+                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" fill="#e0e0e0"/>
+                        <text x="12" y="16" font-size="12" font-weight="bold" text-anchor="middle" fill="#333">?</text>
+                    </svg>
+                </div>
+            </div>
             <div id="siteToggleList">
                 <!-- Site toggles will be dynamically inserted here by popup.js -->
             </div>
