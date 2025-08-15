@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "AIPersonaLoader AI人设加载器",
-	"version": "2.5.1",
+	"version": "2.5.2",
 	"description": "无缝将你配置的个人背景信息注入到对话中，确保AI从第一句话就理解你，做出个性化回复。全程无感，正常对话无需额外操作，支持多套人设、多种AI平台。",
 	"icons":{
 		"16": "img/icon.png",
