@@ -712,7 +712,7 @@ class AIPersonaInputEnhancer {
         
         .ai-persona-popover-host {all: initial;}
         .ai-persona-input-wrapper { position: relative !important; display: inline-block !important; width: 100% !important; vertical-align: top !important; }
-        .ai-persona-icon-container { position: absolute !important; bottom: 5px !important; right: 8px !important; z-index: 10 !important; }
+        .ai-persona-icon-container { position: absolute !important; bottom: 5px !important; right: 8px !important; z-index: 10 !important; display: flex; justify-content: flex-end; align-items: center; width: 100%; box-sizing: border-box;}
         .ai-persona-icon { width: 20px !important; height: 20px !important; border-radius: 8px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; box-shadow: var(--ap-shadow) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
         .ai-persona-icon:hover { transform: translateY(-2px) scale(1.05) !important; box-shadow: var(--ap-shadow-lg) !important;  }
         .ai-persona-icon.ai-persona-icon-disabled { opacity: 0.8 !important; filter: grayscale(100%) !important;}
